@@ -1,0 +1,152 @@
+import { game } from './state.js';
+import { ownedUnits, inventory, deploySlots } from './game.js';
+import { UNIT_CLASSES } from './units.js';
+import { ITEM_CLASSES } from './items.js';
+import { TOWER_CLASS } from './towers.js';
+
+const KEY = 'rtd_save';
+
+export function hasSaveData() {
+    return !!localStorage.getItem(KEY);
+}
+
+export function saveGame() {
+    const data = {
+        wave:      game.waveNumber,
+        lives:     game.lives,
+        gold:      game.gold,
+        unitSlots: game.unitSlots,
+
+        towers: game.towers.map(t => {
+            if (!t) return null;
+            return {
+                type:        t.constructor.name,
+                level:       t.level,
+                damage:      t.damage,
+                attackSpeed: t.attackSpeed,
+                range:       t.range,
+            };
+        }),
+
+        unitMetas: UNIT_CLASSES.map(Cls => {
+            const m = Cls.meta;
+            const e = { type: Cls.name, level: m.level, hp: m.hp, speed: m.speed };
+            if ('defense'   in m) e.defense   = m.defense;
+            if ('time'      in m) e.time       = m.time;
+            if ('dodgeProb' in m) e.dodgeProb  = m.dodgeProb;
+            return e;
+        }),
+
+        ownedCounts: Object.fromEntries(ownedUnits.map(u => [u.type, u.count])),
+
+        deploySlots: deploySlots.map(s => s ? { type: s.type, name: s.name } : null),
+
+        itemMetas: ITEM_CLASSES.map(Cls => {
+            const m = Cls.meta;
+            const e = { type: Cls.name, level: m.level };
+            if ('multiplier' in m) e.multiplier = m.multiplier;
+            if ('bonus'      in m) e.bonus       = m.bonus;
+            return e;
+        }),
+
+        inventoryData: Object.fromEntries(inventory.map(i => [i.type, {
+            count:   i.count,
+            owned:   i.owned,
+            enabled: i.enabled,
+        }])),
+
+        savedAt: Date.now(),
+    };
+    localStorage.setItem(KEY, JSON.stringify(data));
+}
+
+export function loadGame() {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return false;
+
+    try {
+        const data = JSON.parse(raw);
+
+        game.waveNumber = data.wave;
+        game.lives      = data.lives;
+        game.gold       = data.gold;
+        game.unitSlots  = data.unitSlots;
+
+        // 타워 복원 (위치는 나중에 relocateTower() 가 처리)
+        if (data.towers) {
+            game.towers.length = 0;
+            data.towers.forEach((t, i) => {
+                if (!t) { game.towers[i] = null; return; }
+                const Cls = TOWER_CLASS[t.type];
+                if (!Cls) return;
+                const tower = new Cls(0, 0);
+                tower.level       = t.level;
+                tower.damage      = t.damage;
+                tower.attackSpeed = t.attackSpeed;
+                tower.range       = t.range;
+                game.towers[i]    = tower;
+            });
+        }
+
+        // 유닛 메타 복원
+        data.unitMetas?.forEach(saved => {
+            const Cls = UNIT_CLASSES.find(C => C.name === saved.type);
+            if (!Cls) return;
+            const m = Cls.meta;
+            m.level = saved.level;
+            m.hp    = saved.hp;
+            m.speed = saved.speed;
+            if ('defense'   in saved) m.defense   = saved.defense;
+            if ('time'      in saved) m.time       = saved.time;
+            if ('dodgeProb' in saved) m.dodgeProb  = saved.dodgeProb;
+        });
+
+        // 보유 유닛 개수 복원
+        ownedUnits.forEach(u => {
+            const c = data.ownedCounts?.[u.type];
+            if (c !== undefined) u.count = c;
+        });
+
+        // 출전 슬롯 복원
+        deploySlots.fill(null);
+        data.deploySlots?.forEach((s, i) => { deploySlots[i] = s; });
+
+        // 아이템 메타 복원
+        data.itemMetas?.forEach(saved => {
+            const Cls = ITEM_CLASSES.find(C => C.name === saved.type);
+            if (!Cls) return;
+            const m = Cls.meta;
+            m.level = saved.level;
+            if ('multiplier' in saved) m.multiplier = saved.multiplier;
+            if ('bonus'      in saved) m.bonus       = saved.bonus;
+        });
+
+        // 인벤토리 복원
+        inventory.forEach(item => {
+            const saved = data.inventoryData?.[item.type];
+            if (!saved) return;
+            item.count   = saved.count;
+            item.owned   = saved.owned;
+            item.enabled = saved.enabled;
+        });
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export function deleteSave() {
+    localStorage.removeItem(KEY);
+}
+
+export function getSaveSummary() {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    try {
+        const data = JSON.parse(raw);
+        return { wave: data.wave, lives: data.lives, gold: data.gold };
+    } catch {
+        return null;
+    }
+}

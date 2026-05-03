@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <title>RTD</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="gameCanvas"></canvas>
+
+      <div id="sidebar">
+        <div id="panel-area">
+          <div id="sidebar-top">
+            <div id="wave-block">
+              <div id="wave-row">
+                <div id="wave-left">
+                  <span id="wave-label">WAVE</span>
+                  <span id="wave-number">1</span>
+                  <span id="wave-total">/ 40</span>
+                </div>
+                <div id="wave-right">
+                  <button id="btn-speed">1×</button>
+                  <div id="phase-tag">READY</div>
+                </div>
+              </div>
+
+              <div id="wave-prog-bar"></div>
+
+            </div>
+
+            <div id="status-bar">
+              <div id="life-display">
+                <svg id="life-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="1" y="4" width="4" height="2" fill="#f43f5e"/>
+                  <rect x="5" y="2" width="2" height="2" fill="#f43f5e"/>
+                  <rect x="9" y="2" width="2" height="2" fill="#f43f5e"/>
+                  <rect x="7" y="4" width="4" height="2" fill="#f43f5e"/>
+                  <rect x="0" y="6" width="12" height="4" fill="#f43f5e"/>
+                  <rect x="1" y="6" width="10" height="4" fill="#fb7185"/>
+                  <rect x="2" y="10" width="8" height="2" fill="#f43f5e"/>
+                  <rect x="4" y="12" width="4" height="2" fill="#f43f5e"/>
+                  <rect x="5" y="14" width="2" height="1" fill="#e11d48"/>
+                  <rect x="11" y="4" width="4" height="2" fill="#f43f5e"/>
+                  <rect x="12" y="6" width="3" height="4" fill="#f43f5e"/>
+                </svg>
+                <span id="life-amount">3</span>
+              </div>
+
+              <div id="gold-display">
+                <svg id="gold-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="4" y="0" width="8" height="2" fill="#f59e0b"/>
+                  <rect x="2" y="2" width="12" height="2" fill="#f59e0b"/>
+                  <rect x="1" y="4" width="14" height="8" fill="#fcd34d"/>
+                  <rect x="2" y="4" width="2"  height="8" fill="#fbbf24"/>
+                  <rect x="4" y="0" width="8" height="1" fill="#fde68a"/>
+                  <rect x="6" y="5" width="4" height="2" fill="#d97706"/>
+                  <rect x="5" y="7" width="2" height="4" fill="#d97706"/>
+                  <rect x="9" y="7" width="2" height="4" fill="#d97706"/>
+                  <rect x="6" y="9" width="4" height="2" fill="#d97706"/>
+                  <rect x="2" y="12" width="12" height="2" fill="#f59e0b"/>
+                  <rect x="4" y="14" width="8" height="2" fill="#d97706"/>
+                </svg>
+                <span id="gold-amount">10</span>
+              </div>
+              
+            </div>
+          </div>
+
+          <div id="panel-unit" class="panel active"></div>
+          <div id="panel-unit-list" class="panel"></div>
+          <div id="panel-tower" class="panel"></div>
+          <div id="panel-bag" class="panel"></div>
+          <div id="panel-shop" class="panel"></div>
+
+          <button id="btn-start">▶  WAVE START</button>
+        </div>
+
+        <div id="icon-bar">
+          <button class="nav-btn active" data-panel="unit">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span class="nav-label">편성</span>
+          </button>
+          <button class="nav-btn" data-panel="unit-list">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
+            <span class="nav-label">유닛</span>
+            <span id="unit-lvup-dot" class="nav-lvup-dot" style="display:none"></span>
+          </button>
+          <button class="nav-btn" data-panel="tower">
+            <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="4"/><rect x="7" y="6" width="10" height="3"/><rect x="9" y="9" width="6" height="13"/><rect x="7" y="20" width="10" height="2"/></svg>
+            <span class="nav-label">타워</span>
+          </button>
+          <button class="nav-btn" data-panel="bag">
+            <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-label">가방</span>
+          </button>
+          <button class="nav-btn" data-panel="shop">
+            <svg viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m12-9l2 9M9 21h6"/></svg>
+            <span class="nav-label">상점</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="title-overlay">
+      <canvas id="title-stars"></canvas>
+      <div id="title-box">
+        <div id="title-logo">RTD</div>
+        <div id="title-sub">REVERSE TOWER DEFENSE</div>
+        <div id="title-press-any-key">- PRESS ANY KEY -</div>
+        <div id="title-buttons">
+          <button id="btn-new-game">새  게임</button>
+          <button id="btn-continue" disabled>이어 하기</button>
+          <div id="title-save-info" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+# Claude Code 내부 파일
+memory/
+.claude/
+
+# 기획 문서
+document/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 에디터
+.vscode/
+.idea/
+*.suo
+*.user
+
+# 로그
+*.log
