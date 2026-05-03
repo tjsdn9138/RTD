@@ -14,7 +14,7 @@
 
 ## 플레이
 
-🔗 (배포 URL)
+🔗 https://github.com/tjsdn9138/RTD.git
 
 ## 기술 스택
 
