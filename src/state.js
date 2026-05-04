@@ -58,7 +58,7 @@ export function buySlot() {
 // 웨이브 클리어 보상 계산
 // TODO: 수치 조정
 export function getReward() {
-    const defaultReward = game.waveNumber * 10;
+    const defaultReward = game.waveNumber * 50;
     const extraReward = game.survivedCount > 1 ?
         (game.survivedCount - 1) * (defaultReward / 2) : 0
     const bonus = game.goldBonus || 0;

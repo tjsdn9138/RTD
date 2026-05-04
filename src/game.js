@@ -19,7 +19,7 @@ export const RARITY = {
 // 뽑기 가격
 // TODO: 수치 조정
 export const GACHA_COST = {
-    unit: 50,
+    unit: 25,
     item: 100,
 };
 
@@ -32,6 +32,8 @@ export const ownedUnits = UNIT_CLASSES.map(Cls => ({
 
 // 시작 유닛 개수 설정
 ownedUnits.find(u => u.type === 'NormalUnit').count = 1;
+ownedUnits.find(u => u.type === 'FastUnit').count = 1;
+ownedUnits.find(u => u.type === 'SlowUnit').count = 1;
 
 // 보유 아이템
 export const inventory = ITEM_CLASSES.map(Cls => ({

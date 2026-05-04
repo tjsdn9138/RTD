@@ -121,7 +121,7 @@ export class SlowUnit extends Unit {
     static meta = {
         type: 'SlowUnit', name: '느린넘', rarity: 'COMMON',
         ico: '느', bg: '#f0d8c0', fg: '#aa1800',
-        hp: 800, speed: 130, level: 1,
+        hp: 900, speed: 130, level: 1,
         hpMul: 1.15, speedMul: 1.2,
         passive: null, passiveDesc: null,
     };
@@ -157,7 +157,7 @@ export class ShieldUnit extends Unit {
     static meta = {
         type: 'ShieldUnit', name: '방패든넘', rarity: 'UNCOMMON',
         ico: '방', bg: '#f0e8c0', fg: '#c87800',
-        hp: 700, speed: 120, level: 1,
+        hp: 600, speed: 150, level: 1,
         hpMul: 1.15, speedMul: 1.2, defMul: 1.5,
         passive: '방어', defense: 10,
         passiveDesc: (def) => `받는 데미지를 ${def}만큼 감소시킵니다.`,

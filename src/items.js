@@ -61,7 +61,7 @@ export class HpCharm extends PassiveItem {
 export class GoldCharm extends PassiveItem {
     static meta = {
         name: '돈부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, bonus: 10, LevelUpBonus: 5,
+        level: 1, bonus: 100, LevelUpBonus: 50,
         desc: (bonus) => `웨이브 클리어 시 획득 골드가 ${bonus} 증가합니다.`,
     };
     constructor() {
