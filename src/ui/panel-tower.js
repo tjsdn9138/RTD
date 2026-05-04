@@ -97,15 +97,14 @@ function renderDetail(detail, tower, grid) {
                     <div class="stat-fill" style="background:#0a2aaa;width:${Math.min(tower.range / RNG_MAX * 100, 100)}%"></div>
                 </div>
             </div>
-            ${meta.passive ? `
-            <div class="ulist-passive-wrap">
-                <div class="passive-tag">${meta.passive}</div>
-                <div class="ulist-passive-desc">${
-                    typeof meta.passiveDesc === 'function'
-                        ? meta.passiveDesc(meta.skyMul)
-                        : (meta.passiveDesc ?? '')
-                }</div>
-            </div>` : ''}
+            ${meta.passive ? (Array.isArray(meta.passive) ? meta.passive : [meta.passive]).map((p, i) => {
+                const desc = Array.isArray(meta.passiveDesc) ? meta.passiveDesc[i] : meta.passiveDesc;
+                const resolved = typeof desc === 'function' ? desc(meta.decDamage ?? meta.poisonTime ?? meta.skyMul) : (desc ?? '');
+                return `<div class="ulist-passive-wrap">
+                <div class="passive-tag">${p}</div>
+                <div class="ulist-passive-desc">${resolved}</div>
+            </div>`;
+            }).join('') : ''}
         </div>
     `;
 }

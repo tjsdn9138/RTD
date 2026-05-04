@@ -8,10 +8,15 @@ export class Unit {
         this.y     = 0;
         this.speed = 100;
         this.waypointIndex = 0;
-        this.alive   = true;  // 죽으면 false
-        this.active  = false; // 죽거나 통과하면 false
-        this.spawned = false; // 출전 버튼으로 전장에 보내지면 true
-        this.waypoints = [];
+        this.alive     = true;  // 죽으면 false
+        this.active    = false; // 죽거나 통과하면 false
+        this.spawned   = false; // 출전 버튼으로 전장에 보내지면 true
+        this.waypoints       = [];
+        this.healFlash       = 0;
+        this.isPoisoned      = false;
+        this.poisonTimer     = 0;
+        this.poisonDps       = 0;
+        this.damageReduction = 0;
     }
 
     // 유닛 생성
@@ -30,6 +35,22 @@ export class Unit {
 
     update(deltaTime, units) {
         if (!this.active || !this.alive) return;
+
+        if (this.healFlash > 0) {
+            this.healFlash = Math.max(0, this.healFlash - deltaTime / 400);
+        }
+
+        if (this.isPoisoned) {
+            this.poisonTimer -= deltaTime / 1000;
+            if (this.poisonTimer <= 0) {
+                this.isPoisoned  = false;
+                this.poisonTimer = 0;
+                this.poisonDps   = 0;
+            } else {
+                this.takeDamage(this.poisonDps * (deltaTime / 1000), units);
+                if (!this.active || !this.alive) return;
+            }
+        }
 
         const target = this.waypoints[this.waypointIndex]; // 다음 웨이포인트
         const dx = target.x - this.x;
@@ -58,7 +79,7 @@ export class Unit {
 
     // 피격 시 데미지 계산
     takeDamage(amount, units) {
-        this.hp -= amount;
+        this.hp -= amount * (1 - this.damageReduction / 100);
         if (this.hp <= 0) {
             this.alive  = false;
             this.active = false;
@@ -72,16 +93,48 @@ export class Unit {
         if (!this.active) return;
 
         ctx.save();
-        ctx.fillStyle = this.color || '#3498db';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
-        ctx.fill();
+
+        // 힐 수신 효과
+        if (this.healFlash > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12 + 6 * (1 - this.healFlash), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(46, 204, 113, ${this.healFlash})`;
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
+
+        // 독 상태 외곽 글로우
+        if (this.isPoisoned) {
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(125, 186, 0, ${0.5 + 0.4 * pulse})`;
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
+
+        this._drawBody(ctx);
 
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(this.x - 20, this.y - 25, 40, 6);
         ctx.fillStyle = '#2ecc71';
         ctx.fillRect(this.x - 20, this.y - 25, 40 * (this.hp / this.maxHp), 6);
         ctx.restore();
+    }
+
+    _drawBody(ctx) {
+        ctx.fillStyle = this.color || '#3498db';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.isPoisoned) {
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
+            ctx.fill();
+        }
     }
 }
 
@@ -178,6 +231,81 @@ export class ShieldUnit extends Unit {
     }
 }
 
+export class HealUnit extends Unit {
+    static meta = {
+        type: 'HealUnit', name: '힐주는넘', rarity: 'UNCOMMON',
+        ico: '힐', bg: '#f8d0e8', fg: '#8a0050',
+        hp: 300, speed: 200, level: 1,
+        hpMul: 1.2, speedMul: 1.1, healMul: 2,
+        passive: '힐', heal: 100,
+        passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 아군 한명의 체력을 ${heal}만큼 회복시킵니다.`,
+    };
+
+    static HEAL_RANGE    = 150;
+    static HEAL_INTERVAL = 1;
+
+    constructor() {
+        super();
+        this.maxHp      = HealUnit.meta.hp;
+        this.hp         = this.maxHp;
+        this.speed      = HealUnit.meta.speed;
+        this.heal       = HealUnit.meta.heal;
+        this.color      = '#e91e8c';
+        this.healTimer  = 0;
+    }
+
+    update(deltaTime, units) {
+        super.update(deltaTime, units);
+        if (!this.active || !this.alive) return;
+
+        this.healTimer += deltaTime / 1000;
+        if (this.healTimer >= HealUnit.HEAL_INTERVAL) {
+            this.healTimer = 0;
+            this._doHeal(units);
+        }
+    }
+
+    _doHeal(units) {
+        let target   = null;
+        let lowestHp = Infinity;
+        const range2 = HealUnit.HEAL_RANGE ** 2;
+        for (const u of units) {
+            if (u === this) continue;
+            if (!u.active || !u.alive) continue;
+            if (u.hp >= u.maxHp) continue;
+            const dx = u.x - this.x;
+            const dy = u.y - this.y;
+            if (dx * dx + dy * dy > range2) continue;
+            if (u.hp < lowestHp) {
+                lowestHp = u.hp;
+                target   = u;
+            }
+        }
+        if (target) {
+            const amount      = target.isPoisoned ? this.heal * 0.5 : this.heal;
+            target.hp         = Math.min(target.maxHp, target.hp + amount);
+            target.healFlash  = 1;
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.save();
+
+        // 힐 범위 원
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, HealUnit.HEAL_RANGE, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(46, 204, 113, 0.4)';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+        ctx.fillStyle   = 'rgba(46, 204, 113, 0.05)';
+        ctx.fill();
+
+        ctx.restore();
+        super.draw(ctx);
+    }
+}
+
 export class TauntUnit extends Unit {
     static meta = {
         type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
@@ -194,6 +322,75 @@ export class TauntUnit extends Unit {
         this.speed   = TauntUnit.meta.speed;
         this.color   = '#e74c3c';
         this.taunting = true;
+    }
+}
+
+export class BuffUnit extends Unit {
+    static meta = {
+        type: 'BuffUnit', name: '버프주는넘', rarity: 'RARE',
+        ico: '버', bg: '#fff8d0', fg: '#7a5a00',
+        hp: 400, speed: 200, level: 1,
+        hpMul: 1.15, speedMul: 1.25, decMul: 1.5,
+        passive: '버프', decDamage: 10,
+        passiveDesc: (dec) => `범위 내 아군의 받는 피해량이 ${dec}% 감소합니다.`,
+    };
+
+    static BUFF_RANGE = 150;
+
+    constructor() {
+        super();
+        this.maxHp    = BuffUnit.meta.hp;
+        this.hp       = this.maxHp;
+        this.speed    = BuffUnit.meta.speed;
+        this.color    = '#f1c40f';
+        this.decDamage = BuffUnit.meta.decDamage;
+        this._buffed  = new Set();
+    }
+
+    update(deltaTime, units) {
+        super.update(deltaTime, units);
+
+        if (!this.active || !this.alive) {
+            for (const u of this._buffed) u.damageReduction = 0;
+            this._buffed.clear();
+            return;
+        }
+
+        const range2     = BuffUnit.BUFF_RANGE ** 2;
+        const nowBuffed  = new Set();
+
+        for (const u of units) {
+            if (u === this) continue;
+            if (!u.active || !u.alive) continue;
+            const dx = u.x - this.x;
+            const dy = u.y - this.y;
+            if (dx * dx + dy * dy <= range2) {
+                u.damageReduction = this.decDamage;
+                nowBuffed.add(u);
+            }
+        }
+
+        for (const u of this._buffed) {
+            if (!nowBuffed.has(u)) u.damageReduction = 0;
+        }
+        this._buffed = nowBuffed;
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.save();
+
+        // 버프 범위 원 (핑크)
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, BuffUnit.BUFF_RANGE, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(233, 30, 140, 0.35)';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+        ctx.fillStyle   = 'rgba(233, 30, 140, 0.05)';
+        ctx.fill();
+
+        ctx.restore();
+        super.draw(ctx);
     }
 }
 
@@ -233,20 +430,15 @@ export class InvisibleUnit extends Unit {
         }
     }
 
-    draw(ctx) {
-        if (!this.active) return;
+    _drawBody(ctx) {
         ctx.save();
         ctx.globalAlpha = this.isInvisible ? 0.15 : 1;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(this.x - 20, this.y - 25, 40, 6);
-        ctx.fillStyle = '#2ecc71';
-        ctx.fillRect(this.x - 20, this.y - 25, 40 * (this.hp / this.maxHp), 6);
+        super._drawBody(ctx);
         ctx.restore();
+    }
+
+    draw(ctx) {
+        super.draw(ctx);
     }
 }
 
@@ -275,8 +467,8 @@ export class EvadeUnit extends Unit {
 
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
-    FlyUnit, ShieldUnit,
-    TauntUnit,
+    FlyUnit, ShieldUnit, HealUnit,
+    TauntUnit, BuffUnit,
     InvisibleUnit,
     EvadeUnit,
 ];

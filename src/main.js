@@ -254,18 +254,39 @@ function updateAndDrawAttackFlashes(rawDelta) {
         const t     = f.timer / f.duration;
         const alpha = 1 - t;
 
+        if (f.ring) {
+            ctx.save();
+            ctx.globalAlpha = (1 - t) * 0.55;
+            ctx.shadowBlur  = 8;
+            ctx.shadowColor = f.color;
+            ctx.strokeStyle = f.color;
+            ctx.lineWidth   = 1.5 * (1 - t * 0.5);
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, f.maxRadius * t, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+            continue;
+        }
+
         ctx.save();
         ctx.globalAlpha = alpha;
+
+        if (f.glow) {
+            ctx.shadowBlur  = 12;
+            ctx.shadowColor = f.color;
+        }
+
         ctx.strokeStyle = f.color;
-        ctx.lineWidth   = 2;
+        ctx.lineWidth   = f.lineWidth ?? 2;
         ctx.beginPath();
         ctx.moveTo(f.x1, f.y1);
         ctx.lineTo(f.x2, f.y2);
         ctx.stroke();
 
-        ctx.fillStyle = f.color;
+        ctx.shadowBlur = 0;
+        ctx.fillStyle  = f.color;
         ctx.beginPath();
-        ctx.arc(f.x2, f.y2, 5 * (1 - t), 0, Math.PI * 2);
+        ctx.arc(f.x2, f.y2, (f.dotRadius ?? 5) * (1 - t), 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }

@@ -107,7 +107,7 @@ export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
         damage: 220, attackSpeed: 0.5, range: 160,
-        damageMul: 1.1, speedMul: 1.05, rangeMul: 1.3,
+        damageMul: 1.1, speedMul: 1.15, rangeMul: 1.3,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -123,7 +123,7 @@ export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
         damage: 40, attackSpeed: 2, range: 240,
-        damageMul: 1.1, speedMul: 1, rangeMul: 1.1,
+        damageMul: 1.2, speedMul: 1.05, rangeMul: 1.1,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -139,9 +139,9 @@ export class SkyTower extends Tower {
     static meta = {
         name: '공중 타워', rarity: 'UNCOMMON',
         damage: 60, attackSpeed: 1.2, range: 240,
-        damageMul: 1.1, speedMul: 1, rangeMul: 1.1,
+        damageMul: 1.1, speedMul: 1.1, rangeMul: 1.1,
         passive: '공중', skyMul : 2,
-        passiveDesc: (mul) => `비행 유닛을 공격 시 데미지가 ${mul}배 증가합니다.`,
+        passiveDesc: (mul) => `비행 유닛을 공격 시 데미지가 ${mul}배 증가하며,\n비행 유닛을 우선 공격합니다.`,
     };
     constructor(x, y) {
         super(x, y);
@@ -154,15 +154,207 @@ export class SkyTower extends Tower {
     getDamage(target) {
         return target.isFlying ? this.damage * SkyTower.meta.skyMul : this.damage;
     }
+
+    update(deltaTime, units) {
+        if (this.stopped) return;
+        this.attackTimer += deltaTime / 1000;
+        if (this.attackTimer < 1 / this.attackSpeed) return;
+
+        let target      = null;
+        let maxProgress = -Infinity;
+        let hasFly      = false;
+        let hasTaunt    = false;
+
+        units.forEach(unit => {
+            if (!unit.active || !unit.alive) return;
+            if (unit.isInvisible) return;
+            if (this.getDistance(unit) > this.range) return;
+
+            const progress = this.getProgress(unit);
+
+            if (unit.taunting) {
+                if (!hasTaunt || progress > maxProgress) {
+                    hasTaunt    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (hasTaunt) return;
+
+            if (unit.isFlying) {
+                if (!hasFly || progress > maxProgress) {
+                    hasFly      = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (!hasFly && progress > maxProgress) {
+                maxProgress = progress;
+                target      = unit;
+            }
+        });
+
+        if (target) {
+            target.takeDamage(this.getDamage(target), units);
+            attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+            this.attackTimer -= 1 / this.attackSpeed;
+        } else {
+            this.attackTimer = 1 / this.attackSpeed;
+        }
+    }
+}
+
+export class InfraredTower extends Tower {
+    static meta = {
+        name: '적외선 타워', rarity: 'UNCOMMON',
+        damage: 200, attackSpeed: 0.8, range: 240,
+        damageMul: 1.2, speedMul: 1.1, rangeMul: 1.1,
+        passive: '적외선',
+        passiveDesc: '은신한 유닛 공격 가능 및 은신한 유닛 우선 공격',
+    };
+    constructor(x, y) {
+        super(x, y);
+        this.damage      = InfraredTower.meta.damage;
+        this.range       = InfraredTower.meta.range;
+        this.attackSpeed = InfraredTower.meta.attackSpeed;
+        this.color       = '#922b21';
+    }
+
+    update(deltaTime, units) {
+        if (this.stopped) return;
+        this.attackTimer += deltaTime / 1000;
+        if (this.attackTimer < 1 / this.attackSpeed) return;
+
+        let target      = null;
+        let maxProgress = -Infinity;
+        let hasTaunt    = false;
+        let hasInvis    = false;
+
+        units.forEach(unit => {
+            if (!unit.active || !unit.alive) return;
+            if (this.getDistance(unit) > this.range) return;
+
+            const progress = this.getProgress(unit);
+
+            if (unit.taunting) {
+                if (!hasTaunt || progress > maxProgress) {
+                    hasTaunt    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (hasTaunt) return;
+
+            if (unit.isInvisible) {
+                if (!hasInvis || progress > maxProgress) {
+                    hasInvis    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (!hasInvis && progress > maxProgress) {
+                maxProgress = progress;
+                target      = unit;
+            }
+        });
+
+        if (target) {
+            target.takeDamage(this.getDamage(target), units);
+            attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+            this.attackTimer -= 1 / this.attackSpeed;
+        } else {
+            this.attackTimer = 1 / this.attackSpeed;
+        }
+    }
+}
+
+export class PoisonTower extends Tower {
+    static meta = {
+        name: '독 타워', rarity: 'UNCOMMON',
+        damage: 30, attackSpeed: 1.2, range: 240,
+        damageMul: 1.3, speedMul: 1.1, rangeMul: 1.1,
+        passive: '독', poisonTime: 3,
+        passiveDesc: (time) => `${time}초에 걸쳐 도트 데미지를 받습니다.\n독에 걸린 유닛은 받는 회복량이 50% 감소됩니다.`,
+    };
+    constructor(x, y) {
+        super(x, y);
+        this.damage      = PoisonTower.meta.damage;
+        this.range       = PoisonTower.meta.range;
+        this.attackSpeed = PoisonTower.meta.attackSpeed;
+        this.color       = '#7dba00';
+    }
+
+    update(deltaTime, units) {
+        if (this.stopped) return;
+        this.attackTimer += deltaTime / 1000;
+        if (this.attackTimer < 1 / this.attackSpeed) return;
+
+        let target      = null;
+        let maxProgress = -Infinity;
+        let hasTaunt    = false;
+        let hasClean    = false;
+
+        units.forEach(unit => {
+            if (!unit.active || !unit.alive) return;
+            if (unit.isInvisible) return;
+            if (this.getDistance(unit) > this.range) return;
+
+            const progress = this.getProgress(unit);
+
+            if (unit.taunting) {
+                if (!hasTaunt || progress > maxProgress) {
+                    hasTaunt    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (hasTaunt) return;
+
+            if (!unit.isPoisoned) {
+                if (!hasClean || progress > maxProgress) {
+                    hasClean    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (!hasClean && progress > maxProgress) {
+                maxProgress = progress;
+                target      = unit;
+            }
+        });
+
+        if (target) {
+            target.takeDamage(this.getDamage(target), units);
+            target.isPoisoned  = true;
+            target.poisonTimer = PoisonTower.meta.poisonTime;
+            target.poisonDps   = this.damage;
+            attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+            this.attackTimer -= 1 / this.attackSpeed;
+        } else {
+            this.attackTimer = 1 / this.attackSpeed;
+        }
+    }
 }
 
 export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
-        damage: 30, attackSpeed: 1, range: 120,
-        damageMul: 1.1, speedMul: 1, rangeMul: 1.1,
-        passive: '전방위',
-        passiveDesc: '범위 내 모든 적을 동시에 공격합니다.',
+        damage: 50, attackSpeed: 1, range: 160,
+        damageMul: 1.2, speedMul: 1.05, rangeMul: 1.2,
+        passive:     ['전방위', '지상'],
+        passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.', '비행 유닛을 공격할 수 없습니다.'],
     };
     constructor(x, y) {
         super(x, y);
@@ -183,6 +375,7 @@ export class AreaTower extends Tower {
         units.forEach(unit => {
             if (!unit.active || !unit.alive) return;
             if (unit.isInvisible) return;
+            if (unit.isFlying) return;
             if (this.getDistance(unit) > this.range) return;
             unit.takeDamage(this.getDamage(unit), units);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: unit.x, y2: unit.y, color: this.color, timer: 0, duration: 0.2 });
@@ -197,11 +390,111 @@ export class AreaTower extends Tower {
     }
 }
 
+export class ChainTower extends Tower {
+    static meta = {
+        name: '전이 타워', rarity: 'RARE',
+        damage: 100, attackSpeed: 0.7, range: 160,
+        damageMul: 1.2, speedMul: 1.1, rangeMul: 1.2,
+        passive: '전이', decDamage: 50,
+        passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
+    };
+
+    static CHAIN_MAX   = 4;
+
+    constructor(x, y) {
+        super(x, y);
+        this.damage      = ChainTower.meta.damage;
+        this.range       = ChainTower.meta.range;
+        this.attackSpeed = ChainTower.meta.attackSpeed;
+        this.color       = '#00bcd4';
+    }
+
+    update(deltaTime, units) {
+        if (this.stopped) return;
+        this.attackTimer += deltaTime / 1000;
+        if (this.attackTimer < 1 / this.attackSpeed) return;
+
+        let target      = null;
+        let maxProgress = -Infinity;
+        let hasTaunt    = false;
+
+        units.forEach(unit => {
+            if (!unit.active || !unit.alive) return;
+            if (unit.isInvisible) return;
+            if (this.getDistance(unit) > this.range) return;
+
+            const progress = this.getProgress(unit);
+
+            if (unit.taunting) {
+                if (!hasTaunt || progress > maxProgress) {
+                    hasTaunt    = true;
+                    maxProgress = progress;
+                    target      = unit;
+                }
+                return;
+            }
+
+            if (!hasTaunt && progress > maxProgress) {
+                maxProgress = progress;
+                target      = unit;
+            }
+        });
+
+        if (!target) {
+            this.attackTimer = 1 / this.attackSpeed;
+            return;
+        }
+
+        // 1차 공격
+        const hit = new Set([target]);
+        target.takeDamage(this.damage, units);
+        attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25, lineWidth: 3, dotRadius: 6, glow: true });
+        attackFlashes.push({ ring: true, x: target.x, y: target.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
+
+        // 전이 체인
+        let prev        = target;
+        let chainDamage = this.damage * 0.5;
+
+        for (let i = 0; i < ChainTower.CHAIN_MAX; i++) {
+            const prevProgress = this.getProgress(prev);
+            let next    = null;
+            let minDist = Infinity;
+
+            units.forEach(unit => {
+                if (!unit.active || !unit.alive) return;
+                if (unit.isInvisible) return;
+                if (hit.has(unit)) return;
+                if (this.getProgress(unit) >= prevProgress) return; // 뒤쪽만
+
+                const dx = unit.x - prev.x;
+                const dy = unit.y - prev.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > this.range * 2) return;
+                if (dist < minDist) { minDist = dist; next = unit; }
+            });
+
+            if (!next) break;
+
+            const lineWidth = 3 - i * 0.5;
+            const dotRadius = 5 - i * 0.8;
+            hit.add(next);
+            next.takeDamage(chainDamage, units);
+            attackFlashes.push({ x1: prev.x, y1: prev.y, x2: next.x, y2: next.y, color: this.color, timer: 0, duration: 0.3, lineWidth, dotRadius, glow: true });
+            attackFlashes.push({ ring: true, x: next.x, y: next.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
+
+            prev        = next;
+            chainDamage *= 0.5;
+        }
+
+        this.attackTimer -= 1 / this.attackSpeed;
+    }
+}
+
 export class SniperTower extends Tower {
     static meta = {
         name: '저격 타워', rarity: 'HERO',
         damage: 500, attackSpeed: 0.1, range: 400,
-        damageMul: 1.1, speedMul: 1, rangeMul: 1.1,
+        damageMul: 1.2, speedMul: 1, rangeMul: 1.1,
         passive: '저격',
         passiveDesc: '체력이 가장 낮은 적을 우선 공격하며,\nHP 10% 이하의 적을 즉시 처형합니다.',
     };
@@ -213,14 +506,16 @@ export class SniperTower extends Tower {
         this.color       = '#2c3e50';
     }
 
-    // 체력 가장 낮은 유닛 우선 타겟
+    // 체력 가장 낮은 유닛 우선 타겟 (도발 > 최저 HP)
     update(deltaTime, units) {
         if (this.stopped) return;
         this.attackTimer += deltaTime / 1000;
         if (this.attackTimer < 1 / this.attackSpeed) return;
 
         let target = null;
+        let tauntTarget = null;
         let minHpRatio = Infinity;
+        let minTauntRatio = Infinity;
 
         units.forEach(unit => {
             if (!unit.active || !unit.alive) return;
@@ -228,11 +523,17 @@ export class SniperTower extends Tower {
             if (this.getDistance(unit) > this.range) return;
 
             const hpRatio = unit.hp / unit.maxHp;
+            if (unit.taunting && hpRatio < minTauntRatio) {
+                minTauntRatio = hpRatio;
+                tauntTarget = unit;
+            }
             if (hpRatio < minHpRatio) {
                 minHpRatio = hpRatio;
                 target = unit;
             }
         });
+
+        target = tauntTarget ?? target;
 
         if (target) {
             target.takeDamage(this.getDamage(target), units);
@@ -314,12 +615,19 @@ export class AllRoundTower extends Tower {
         }
 
         if (hasSniper) {
-            let target = null;
+            let target     = null;
             let minHpRatio = Infinity;
+            let hasTaunt   = false;
             units.forEach(unit => {
                 if (!unit.active || !unit.alive) return;
                 if (unit.isInvisible) return;
                 if (this.getDistance(unit) > this.range) return;
+                if (unit.taunting) {
+                    const ratio = unit.hp / unit.maxHp;
+                    if (!hasTaunt || ratio < minHpRatio) { hasTaunt = true; minHpRatio = ratio; target = unit; }
+                    return;
+                }
+                if (hasTaunt) return;
                 const hpRatio = unit.hp / unit.maxHp;
                 if (hpRatio < minHpRatio) { minHpRatio = hpRatio; target = unit; }
             });
@@ -363,8 +671,8 @@ export const attackFlashes = [];
 
 export const TOWER_CLASSES = [
     NormalTower, HeavyTower, FastTower,
-    SkyTower,
-    AreaTower,
+    SkyTower, InfraredTower, PoisonTower,
+    AreaTower, ChainTower,
     SniperTower,
     AllRoundTower,
 ];

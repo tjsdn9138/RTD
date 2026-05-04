@@ -88,6 +88,12 @@ function renderDetail(detail, owned, grid) {
     const nextTime  = 'timePlus'  in m && nextLevel % 5 === 0
         ? parseFloat((m.time + m.timePlus).toFixed(2))
         : null;
+    const nextDec   = 'decDamage' in m && nextLevel % 5 === 0
+        ? Math.floor(m.decDamage * m.decMul)
+        : null;
+    const nextHeal  = 'heal'      in m && nextLevel % 5 === 0
+        ? Math.floor(m.heal * m.healMul)
+        : null;
 
     detail.innerHTML = `
         <div class="ulist-detail-header">
@@ -136,7 +142,17 @@ function renderDetail(detail, owned, grid) {
                                         String(m.time),
                                         `${m.time} <span class="ulist-next-val" id="next-time">→ ${nextTime}</span>`
                                       )
-                                    : m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? 0)
+                                    : nextDec !== null
+                                        ? m.passiveDesc(m.decDamage).replace(
+                                            String(m.decDamage),
+                                            `${m.decDamage} <span class="ulist-next-val" id="next-dec">→ ${nextDec}</span>`
+                                          )
+                                        : nextHeal !== null
+                                            ? m.passiveDesc(m.heal).replace(
+                                                String(m.heal),
+                                                `${m.heal} <span class="ulist-next-val" id="next-heal">→ ${nextHeal}</span>`
+                                              )
+                                            : m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? m.decDamage ?? m.heal ?? 0)
                         : (m.passiveDesc ?? '')
                 }</div>
             </div>` : ''}
