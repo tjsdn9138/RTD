@@ -28,7 +28,7 @@ export class ActiveItem extends Item {
 export class SpeedCharm extends PassiveItem {
     static meta = {
         name: '속도부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.05, LevelUpMul: 1.1,
+        level: 1, multiplier: 1.2, LevelUpMul: 1.1,
         desc: (mul) => `아군 전체의 속도를 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -43,7 +43,7 @@ export class SpeedCharm extends PassiveItem {
 export class HpCharm extends PassiveItem {
     static meta = {
         name: '체력부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.05, LevelUpMul: 1.1,
+        level: 1, multiplier: 1.2, LevelUpMul: 1.1,
         desc: (mul) => `아군 전체의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -60,8 +60,8 @@ export class HpCharm extends PassiveItem {
 
 export class GoldCharm extends PassiveItem {
     static meta = {
-        name: '돈부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, bonus: 5, LevelUpBonus: 5,
+        name: '돈부적', kind: 'passive', rarity: 'COMMON',
+        level: 1, bonus: 10, LevelUpBonus: 5,
         desc: (bonus) => `웨이브 클리어 시 획득 골드가 ${bonus} 증가합니다.`,
     };
     constructor() {
@@ -96,7 +96,7 @@ export class NormalUnitCharm extends PassiveItem {
 export class SpeedUnitCharm extends PassiveItem {
     static meta = {
         name: '빠른부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.1, LevelUpMul: 1.1,
+        level: 1, multiplier: 1.2, LevelUpMul: 1.1,
         desc: (mul) => `빠른넘의 체력을 ${mul}배 상승시킵니다.`,
     };
     constructor() {
@@ -115,7 +115,7 @@ export class SpeedUnitCharm extends PassiveItem {
 export class SlowUnitCharm extends PassiveItem {
     static meta = {
         name: '느린부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.1, LevelUpMul: 1.1,
+        level: 1, multiplier: 1.2, LevelUpMul: 1.1,
         desc: (mul) => `느린넘의 속도를 ${mul}배 상승시킵니다.`,
     };
     constructor() {
@@ -150,8 +150,8 @@ export class ShieldUnitCharm extends PassiveItem {
 
 export class TauntUnitCharm extends PassiveItem {
     static meta = {
-        name: '도발부적', kind: 'passive', rarity: 'HERO',
-        level: 1, multiplier: 1.1, LevelUpMul: 1.1,
+        name: '도발부적', kind: 'passive', rarity: 'RARE',
+        level: 1, multiplier: 1.3, LevelUpMul: 1.1,
         desc: (mul) => `어그로끄는넘의 체력을 ${mul}배 상승시킵니다.`,
     };
     constructor() {
@@ -223,10 +223,10 @@ export function applyPassiveItems(units, inventory) {
 }
 
 export const ITEM_CLASSES = [
-    SpeedCharm, HpCharm,
-    GoldCharm, NormalUnitCharm, SpeedUnitCharm, SlowUnitCharm,
-    ShieldUnitCharm,
-    TauntUnitCharm, TowerStop,
+    SpeedCharm, HpCharm, GoldCharm,
+    NormalUnitCharm, SpeedUnitCharm, SlowUnitCharm,
+    ShieldUnitCharm, TauntUnitCharm,
+    TowerStop,
     UnitGachaTicket, ItemGachaTicket,
     TutorialBook,
 ];

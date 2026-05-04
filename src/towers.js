@@ -76,7 +76,7 @@ export class Tower {
         if (target) {
             target.takeDamage(this.getDamage(target), units);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
-            this.attackTimer = 0;
+            this.attackTimer -= 1 / this.attackSpeed;
         }
     }
 
@@ -120,7 +120,7 @@ export class HeavyTower extends Tower {
 export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
-        damage: 40, attackSpeed: 2, range: 240,
+        damage: 30, attackSpeed: 2, range: 240,
         damageMul: 1.1, speedMul: 1, rangeMul: 1.1,
         passive: null, passiveDesc: null,
     };
@@ -187,7 +187,7 @@ export class AreaTower extends Tower {
             attacked = true;
         });
 
-        if (attacked) this.attackTimer = 0;
+        if (attacked) this.attackTimer -= 1 / this.attackSpeed;
     }
 }
 
@@ -237,7 +237,7 @@ export class SniperTower extends Tower {
                 target.takeDamage(target.hp, units);
             }
 
-            this.attackTimer = 0;
+            this.attackTimer -= 1 / this.attackSpeed;
         }
     }
 }
@@ -297,7 +297,7 @@ export class AllRoundTower extends Tower {
                     if (unit.hp / unit.maxHp <= 0.1) unit.takeDamage(unit.hp, units);
                 });
             }
-            if (attacked) this.attackTimer = 0;
+            if (attacked) this.attackTimer -= 1 / this.attackSpeed;
             return;
         }
 
@@ -315,7 +315,7 @@ export class AllRoundTower extends Tower {
                 target.takeDamage(this.getDamage(target), units);
                 attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.4 });
                 if (target.alive && target.hp / target.maxHp <= 0.1) target.takeDamage(target.hp, units);
-                this.attackTimer = 0;
+                this.attackTimer -= 1 / this.attackSpeed;
             }
             return;
         }
@@ -338,7 +338,7 @@ export class AllRoundTower extends Tower {
         if (target) {
             target.takeDamage(this.getDamage(target), units);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
-            this.attackTimer = 0;
+            this.attackTimer -= 1 / this.attackSpeed;
         }
     }
 }

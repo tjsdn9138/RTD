@@ -88,7 +88,7 @@ export class NormalUnit extends Unit {
         type: 'NormalUnit', name: '평범한넘', rarity: 'COMMON',
         ico: '평', bg: '#c8d8f0', fg: '#0a2aaa',
         hp: 500, speed: 200, level: 1,
-        hpMul: 1.1, speedMul: 1.1,
+        hpMul: 1.2, speedMul: 1.1,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -105,7 +105,7 @@ export class FastUnit extends Unit {
         type: 'FastUnit', name: '빠른넘', rarity: 'COMMON',
         ico: '빠', bg: '#c0e8c0', fg: '#2a8a00',
         hp: 300, speed: 300, level: 1,
-        hpMul: 1.15, speedMul: 1.05,
+        hpMul: 1.15, speedMul: 1.1,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -122,7 +122,7 @@ export class SlowUnit extends Unit {
         type: 'SlowUnit', name: '느린넘', rarity: 'COMMON',
         ico: '느', bg: '#f0d8c0', fg: '#aa1800',
         hp: 800, speed: 130, level: 1,
-        hpMul: 1.15, speedMul: 1.05,
+        hpMul: 1.15, speedMul: 1.2,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -139,7 +139,7 @@ export class FlyUnit extends Unit {
         type: 'FlyUnit', name: '날라댕기는넘', rarity: 'UNCOMMON',
         ico: '날', bg: '#d0eaf8', fg: '#1a5f8a',
         hp: 300, speed: 180, level: 1,
-        hpMul: 1.1, speedMul: 1.1,
+        hpMul: 1.2, speedMul: 1.2,
         passive: '비행',
         passiveDesc: '특정 타워의 공격을 받지 않습니다.',
     };
@@ -158,7 +158,7 @@ export class ShieldUnit extends Unit {
         type: 'ShieldUnit', name: '방패든넘', rarity: 'UNCOMMON',
         ico: '방', bg: '#f0e8c0', fg: '#c87800',
         hp: 700, speed: 120, level: 1,
-        hpMul: 1.1, speedMul: 1.1, defMul: 1.5,
+        hpMul: 1.15, speedMul: 1.2, defMul: 1.5,
         passive: '방어', defense: 10,
         passiveDesc: (def) => `받는 데미지를 ${def}만큼 감소시킵니다.`,
     };
@@ -181,7 +181,7 @@ export class TauntUnit extends Unit {
         type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
         ico: '어', bg: '#f0c8c8', fg: '#aa1800',
         hp: 1100, speed: 100, level: 1,
-        hpMul: 1.1, speedMul: 1.1,
+        hpMul: 1.15, speedMul: 1.25,
         passive: '도발',
         passiveDesc: '모든 타워가 이 유닛을 우선 공격합니다.',
     };
@@ -200,7 +200,7 @@ export class InvisibleUnit extends Unit {
         type: 'InvisibleUnit', name: '투명한넘', rarity: 'HERO',
         ico: '투', bg: '#e0e0e8', fg: '#5a5a7a',
         hp: 300, speed: 250, level: 1,
-        hpMul: 1.05, speedMul: 1.15, timePlus: 0.5,
+        hpMul: 1.3, speedMul: 1.2, timePlus: 0.5,
         passive: '투명', time: 2,
         passiveDesc: (time) => `4초마다 ${time}초 동안 타겟이 되지 않습니다.`,
     };
@@ -253,7 +253,7 @@ export class EvadeUnit extends Unit {
         type: 'EvadeUnit', name: '잽싼넘', rarity: 'LEGEND',
         ico: '잽', bg: '#b8ede4', fg: '#0a6a4a',
         hp: 100, speed: 400, level: 1,
-        hpMul: 1.1, speedMul: 1.1, dodgeMul: 1.5,
+        hpMul: 1.5, speedMul: 1.3, dodgeMul: 2,
         passive: '회피', dodgeProb: 10,
         passiveDesc: (prob) => `${prob}% 확률로 공격을 피합니다.`,
     };
