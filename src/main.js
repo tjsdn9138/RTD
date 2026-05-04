@@ -36,18 +36,84 @@ export function relocateTower() {
 
 // 게임 시작 시 첫 타워 생성 (1회)
 function initFirstTower() {
-    const idx = Math.floor(Math.random() * towerSlots.length);
+    const towerRange = new TOWER_CLASS['NormalTower'](0, 0).range;
+    const weights = towerSlots.map(slot => {
+        const cov = getSlotPathCoverage(slot, waypoints, towerRange);
+        return cov > 0 ? 1 / cov : 1;
+    });
+    const idx = pickWeightedIndex(weights);
     game.towers[idx] = new TOWER_CLASS['NormalTower'](towerSlots[idx].x, towerSlots[idx].y);
+}
+
+// 슬롯에서 경로 세그먼트 중 range 안에 들어오는 길이 계산
+function segmentCoveredLength(px, py, ax, ay, bx, by, r) {
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return 0;
+    const fx = ax - px, fy = ay - py;
+    const a = dx * dx + dy * dy;
+    const b = 2 * (fx * dx + fy * dy);
+    const c = fx * fx + fy * fy - r * r;
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) return 0;
+    const sq = Math.sqrt(disc);
+    const t1 = Math.max(0, Math.min(1, (-b - sq) / (2 * a)));
+    const t2 = Math.max(0, Math.min(1, (-b + sq) / (2 * a)));
+    return Math.max(0, t2 - t1) * len;
+}
+
+// 슬롯이 커버하는 경로 총길이 (모든 세그먼트 합산)
+function getSlotPathCoverage(slot, wps, range) {
+    let total = 0;
+    for (let i = 0; i < wps.length - 1; i++) {
+        total += segmentCoveredLength(
+            slot.x, slot.y,
+            wps[i].x, wps[i].y,
+            wps[i + 1].x, wps[i + 1].y,
+            range
+        );
+    }
+    return total;
+}
+
+// 가중치 배열에서 인덱스 랜덤 선택
+function pickWeightedIndex(weights) {
+    const total = weights.reduce((s, w) => s + w, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < weights.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return i;
+    }
+    return weights.length - 1;
 }
 
 // 창 크기에 맞춰서 캔버스 크기 설정
 function resizeCanvas() {
+    const oldW = canvas.width  || 0;
+    const oldH = canvas.height || 0;
     canvas.width  = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     initMap();
+
+    if (oldW > 0 && oldH > 0 && game.units.length > 0) {
+        const scaleX = canvas.width / oldW;
+        const scaleY = canvas.height / oldH;
+        game.units.forEach(u => {
+            if (u.active) {
+                u.x *= scaleX;
+                u.y *= scaleY;
+                u.waypoints = waypoints;
+            }
+        });
+    }
 }
 // 창 크기 변경 시 실행
 window.addEventListener('resize', resizeCanvas);
+
+// 수동 유닛 출전
+document.addEventListener('spawnunit', (e) => {
+    e.detail.unit.spawn(waypoints, 1, 1);
+});
 
 // wavestart 이벤트
 document.addEventListener('wavestart', (e) => {
@@ -64,17 +130,23 @@ document.addEventListener('nextwavestart', () => {
     if (game.waveNumber % 5 === 0) {
         const emptyIdxList = towerSlots.map((_, i) => i).filter(i => !game.towers[i]);
         if (emptyIdxList.length > 0) {
-            const emptyIdx = emptyIdxList[Math.floor(Math.random() * emptyIdxList.length)];
-
+            // 타워 먼저 선택
             let selectedTower;
-            // 10번째 웨이브마다 상위 타워 고정 생성
             if (game.waveNumber % 10 === 0) {
                 const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
-                selectedTower = selectTower(rarities[Math.floor(game.waveNumber / 10)])
+                selectedTower = selectTower(rarities[Math.floor(game.waveNumber / 10)]);
             } else {
                 selectedTower = underWeightedPick(Math.floor(game.waveNumber / 10));
             }
             if (selectedTower) {
+                // 해당 타워의 실제 사거리로 슬롯별 커버 경로 계산 후 반비례 가중치로 슬롯 선택
+                const towerRange = new TOWER_CLASS[selectedTower](0, 0).range;
+                const weights = emptyIdxList.map(i => {
+                    const cov = getSlotPathCoverage(towerSlots[i], waypoints, towerRange);
+                    return cov > 0 ? 1 / cov : 1;
+                });
+                const emptyIdx = emptyIdxList[pickWeightedIndex(weights)];
+
                 // 기존 타워 최솟값 먼저 계산 (새 타워 추가 전)
                 let minTowerLevel = game.towers.reduce((min, t) => t ? Math.min(min, t.level) : min, 100);
                 if (minTowerLevel === 100) minTowerLevel = 1;
@@ -214,11 +286,19 @@ function gameLoop(timestamp) {
     drawTowerSlots(ctx, towerSlots, game.towers);
 
     if (game.state === STATE.BATTLE) {
-        game.spawnTimer += deltaTime / 1000;
-        if (game.spawnCount < game.units.length && game.spawnTimer >= game.spawnInterval) {
-            game.units[game.spawnCount].spawn(waypoints, 1, 1);
-            game.spawnCount++;
-            game.spawnTimer = 0;
+        if (game.autoSpawn) {
+            game.spawnTimer += deltaTime / 1000;
+            if (game.spawnTimer >= game.spawnInterval) {
+                game.spawnTimer = 0;
+                const next = game.units.find(u => !u.spawned);
+                if (next) {
+                    next.spawn(waypoints, 1, 1);
+                    if (!game.units.some(u => !u.spawned)) game.autoSpawn = false;
+                } else {
+                    game.autoSpawn = false;
+                }
+                refreshUnitPanel();
+            }
         }
 
         game.towers.forEach(t => { if (t) t.update(deltaTime, game.units); });
@@ -229,6 +309,7 @@ function gameLoop(timestamp) {
 
     if (prevState !== STATE.RESULT && game.state === STATE.RESULT) {
         updateHUD();
+        refreshUnitPanel();
     }
     prevState = game.state;
 

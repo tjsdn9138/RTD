@@ -24,6 +24,7 @@ export const game = {
     waveResult: null, // 'CLEAR' | 'FAIL' | null
     pendingItem: null, // 사용 대기 중인 소비 아이템 type
     goldBonus: 0,
+    autoSpawn: false,  // 자동 출전 활성화 여부
 };
 
 export const MAX_SLOTS      = 10; // 유닛 최대 개수
@@ -70,6 +71,7 @@ export function startWave() {
     game.state       = STATE.BATTLE;
     game.spawnTimer  = 0;
     game.spawnCount  = 0;
+    game.autoSpawn   = false;
     game.survivedCount = 0;
     game.deadCount   = 0;
     game.units.forEach(unit => {
@@ -84,7 +86,8 @@ export function startWave() {
 // 웨이브 종료 확인
 export function checkWaveEnd() {
     const allDone = game.units.every(unit => !unit.active);
-    if (game.spawnCount < game.units.length || !allDone) return;
+    const allSent = game.units.every(unit => unit.spawned);
+    if (!allSent || !allDone) return;
     game.waveResult = game.survivedCount > 0 ? 'CLEAR' : 'FAIL';
     game.state = STATE.RESULT;
 }

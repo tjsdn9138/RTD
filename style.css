@@ -470,6 +470,91 @@ body {
 
 .deploy-slot.filled:hover .remove-hint { opacity: 1; }
 
+/* 자동 출전 버튼 */
+#auto-spawn-row {
+  padding: 6px 0 4px;
+  justify-content: stretch;
+}
+
+#auto-spawn-btn {
+  flex: 1;
+  padding: 10px 0;
+  font-family: 'NeoDunggeunmo', monospace;
+  font-size: 13px;
+  background: #1a4a00;
+  color: #80c060;
+  border: 2px solid #2a6a00;
+  cursor: pointer;
+  letter-spacing: 2px;
+  box-shadow: inset 2px 2px 0 #2a6a10, inset -2px -2px 0 #0a2a00;
+}
+
+#auto-spawn-btn:hover:not(:disabled) {
+  background: #2a6a00;
+}
+
+#auto-spawn-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#auto-spawn-btn.auto-on {
+  background: #4a1a00;
+  color: #e09060;
+  border-color: #8a3a00;
+  box-shadow: inset 2px 2px 0 #6a2a00, inset -2px -2px 0 #200800;
+}
+
+#auto-spawn-btn.auto-on:hover {
+  background: #6a2a00;
+}
+
+/* 전투 중 출전 슬롯 */
+.deploy-slot.spawn-ready {
+  cursor: pointer;
+  border-color: #2a6a00;
+  background: #c8d8c0;
+}
+.deploy-slot.spawn-ready:hover {
+  border-color: #4aaa10;
+  background: #b8d0a8;
+}
+.deploy-slot.spawn-ready:active {
+  background: #a8c098;
+}
+
+.slot-spawn-btn {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: 'NeoDunggeunmo', monospace;
+  font-size: 11px;
+  color: #2a7a00;
+  font-weight: bold;
+}
+
+.deploy-slot.spawn-sent {
+  cursor: default;
+  opacity: 0.45;
+  border-color: #8a7a5a;
+}
+.deploy-slot.spawn-sent:hover {
+  border-color: #8a7a5a;
+}
+
+.slot-sent-label {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: 'NeoDunggeunmo', monospace;
+  font-size: 11px;
+  color: #7a6a4a;
+}
+
 /* 보유 유닛 */
 .owned-area {
   padding: 12px 14px;
@@ -1131,6 +1216,108 @@ body {
     color: #c87800;
     font-family: 'NeoDunggeunmo', monospace;
     margin-left: 6px;
+}
+
+/* ── 게임 오버 화면 ── */
+#gameover-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 4, 4, 0.82);
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    animation: gameover-fadein 0.5s ease;
+}
+
+@keyframes gameover-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+#gameover-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    border: 4px solid #6a1010;
+    padding: 52px 80px 48px;
+    background: rgba(14, 4, 4, 0.94);
+    box-shadow:
+        6px 6px 0 #0a0000,
+        inset 0 0 0 2px #3a0808,
+        0 0 40px rgba(160, 20, 20, 0.35);
+    image-rendering: pixelated;
+    animation: gameover-slidein 0.4s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+@keyframes gameover-slidein {
+    from { transform: translateY(-30px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+#gameover-title {
+    font-size: 80px;
+    font-family: 'NeoDunggeunmo', monospace;
+    color: #c83030;
+    text-shadow:
+        4px 4px 0 #2a0000,
+        0 0 16px #801010,
+        0 0 32px #500808;
+    letter-spacing: 8px;
+    animation: gameover-pulse 2s ease-in-out infinite;
+}
+
+@keyframes gameover-pulse {
+    0%, 100% { text-shadow: 4px 4px 0 #2a0000, 0 0 16px #801010, 0 0 32px #500808; }
+    50%       { text-shadow: 4px 4px 0 #2a0000, 0 0 24px #c03030, 0 0 48px #801010; }
+}
+
+#gameover-stats {
+    font-family: 'NeoDunggeunmo', monospace;
+    font-size: 20px;
+    color: #9a7070;
+    letter-spacing: 3px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    border-top: 2px solid #3a1010;
+    border-bottom: 2px solid #3a1010;
+    padding: 14px 0;
+    width: 100%;
+    justify-content: center;
+}
+
+#gameover-wave-num {
+    font-size: 36px;
+    color: #e09080;
+}
+
+#btn-restart {
+    width: 240px;
+    padding: 20px 0;
+    font-family: 'NeoDunggeunmo', monospace;
+    font-size: 20px;
+    background: #6a1010;
+    color: #f0b0a0;
+    border: none;
+    cursor: pointer;
+    image-rendering: pixelated;
+    box-shadow:
+        inset 3px 3px 0 #8a2020,
+        inset -3px -3px 0 #2a0404;
+    letter-spacing: 4px;
+}
+
+#btn-restart:hover {
+    background: #8a2020;
+}
+
+#btn-restart:active {
+    box-shadow:
+        inset 3px 3px 0 #2a0404,
+        inset -3px -3px 0 #8a2020;
+    color: #d09080;
 }
 
 /* ── 타이틀 화면 ── */

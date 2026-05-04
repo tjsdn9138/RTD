@@ -8,13 +8,15 @@ export class Unit {
         this.y     = 0;
         this.speed = 100;
         this.waypointIndex = 0;
-        this.alive  = true; // 죽으면 false
-        this.active = false; // 죽거나 통과하면 false
+        this.alive   = true;  // 죽으면 false
+        this.active  = false; // 죽거나 통과하면 false
+        this.spawned = false; // 출전 버튼으로 전장에 보내지면 true
         this.waypoints = [];
     }
 
     // 유닛 생성
     spawn(waypoints, hpMultiplier = 1, speedMultiplier = 1) {
+        this.spawned = true;
         this.x = waypoints[0].x;
         this.y = waypoints[0].y;
         this.waypointIndex = 0;

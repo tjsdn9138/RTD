@@ -195,6 +195,7 @@ elBtnStart.addEventListener('click', () => {
 
       if (game.state === STATE.GAMEOVER) {
         deleteSave();
+        showGameOver(game.waveNumber);
       } else {
         retryWave();
         document.querySelector('.bag-card.selected')?.classList.remove('selected');
@@ -204,6 +205,15 @@ elBtnStart.addEventListener('click', () => {
     updateHUD();
     refreshUnitPanelInner();
   }
+});
+
+function showGameOver(waveNumber) {
+  document.getElementById('gameover-wave-num').textContent = waveNumber;
+  document.getElementById('gameover-overlay').style.display = 'flex';
+}
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  location.reload();
 });
 
 export function refreshUnitPanel() {
