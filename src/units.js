@@ -143,7 +143,7 @@ export class NormalUnit extends Unit {
         type: 'NormalUnit', name: '평범한넘', rarity: 'COMMON',
         ico: '평', bg: '#c8d8f0', fg: '#0a2aaa',
         hp: 500, speed: 200, level: 1,
-        hpMul: 1.2, speedMul: 1.1,
+        hpMul: 1.1, speedMul: 1.1,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -176,8 +176,8 @@ export class SlowUnit extends Unit {
     static meta = {
         type: 'SlowUnit', name: '느린넘', rarity: 'COMMON',
         ico: '느', bg: '#f0d8c0', fg: '#aa1800',
-        hp: 900, speed: 130, level: 1,
-        hpMul: 1.15, speedMul: 1.2,
+        hp: 800, speed: 130, level: 1,
+        hpMul: 1.1, speedMul: 1.15,
         passive: null, passiveDesc: null,
     };
     constructor() {

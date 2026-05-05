@@ -13,14 +13,13 @@ const ctx    = canvas.getContext('2d');
 // 맵 상태
 let waypoints  = [];
 let towerSlots = [];
+let logicalW   = 0;
+let logicalH   = 0;
 
 // 맵 생성
 function initMap() {
-    const W = canvas.width;
-    const H = canvas.height;
-    waypoints  = getWaypoints(W, H);
-    towerSlots = getTowerSlots(W, H);
-
+    waypoints  = getWaypoints(logicalW, logicalH);
+    towerSlots = getTowerSlots(logicalW, logicalH);
     relocateTower();
 }
 
@@ -89,15 +88,24 @@ function pickWeightedIndex(weights) {
 
 // 창 크기에 맞춰서 캔버스 크기 설정
 function resizeCanvas() {
-    const oldW = canvas.width  || 0;
-    const oldH = canvas.height || 0;
-    canvas.width  = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    const dpr  = window.devicePixelRatio || 1;
+    const cssW = canvas.offsetWidth;
+    const cssH = canvas.offsetHeight;
+
+    const oldW = logicalW;
+    const oldH = logicalH;
+    logicalW = cssW;
+    logicalH = cssH;
+
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     initMap();
 
     if (oldW > 0 && oldH > 0 && game.units.length > 0) {
-        const scaleX = canvas.width / oldW;
-        const scaleY = canvas.height / oldH;
+        const scaleX = logicalW / oldW;
+        const scaleY = logicalH / oldH;
         game.units.forEach(u => {
             if (u.active) {
                 u.x *= scaleX;
@@ -107,8 +115,26 @@ function resizeCanvas() {
         });
     }
 }
-// 창 크기 변경 시 실행
-window.addEventListener('resize', resizeCanvas);
+// 창 크기 변경 시 실행 (브라우저 zoom 변경은 무시)
+// Chrome  zoom: innerWidth × dpr 일정 (dpr 같이 변함)
+// Safari  zoom: outerWidth 일정   (dpr 안 변하고 innerWidth만 줄어듦)
+let lastPhysViewW = Math.round(window.innerWidth  * (window.devicePixelRatio || 1));
+let lastPhysViewH = Math.round(window.innerHeight * (window.devicePixelRatio || 1));
+let lastOuterW    = window.outerWidth;
+let lastOuterH    = window.outerHeight;
+window.addEventListener('resize', () => {
+    const physW  = Math.round(window.innerWidth  * (window.devicePixelRatio || 1));
+    const physH  = Math.round(window.innerHeight * (window.devicePixelRatio || 1));
+    const outerW = window.outerWidth;
+    const outerH = window.outerHeight;
+    const isZoom = (physW === lastPhysViewW && physH === lastPhysViewH)
+                || (outerW === lastOuterW   && outerH === lastOuterH);
+    lastPhysViewW = physW;
+    lastPhysViewH = physH;
+    lastOuterW    = outerW;
+    lastOuterH    = outerH;
+    if (!isZoom) resizeCanvas();
+});
 
 // 수동 유닛 출전
 document.addEventListener('spawnunit', (e) => {
@@ -302,8 +328,8 @@ function gameLoop(timestamp) {
     const deltaTime = rawDelta * game.gameSpeed * 1000;
     lastTime = timestamp;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMap(ctx, canvas.width, canvas.height, waypoints);
+    ctx.clearRect(0, 0, logicalW, logicalH);
+    drawMap(ctx, logicalW, logicalH, waypoints);
     drawTowerSlots(ctx, towerSlots, game.towers);
 
     if (game.state === STATE.BATTLE) {

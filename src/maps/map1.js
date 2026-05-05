@@ -41,17 +41,21 @@ export function getTowerSlots(W, H) {
 let mapCache = null;
 
 export function drawMap(ctx, W, H, waypoints) {
-    if (!mapCache || mapCache.width !== W || mapCache.height !== H) {
-        mapCache = buildMapCache(W, H, waypoints);
+    const dpr   = window.devicePixelRatio || 1;
+    const physW = Math.round(W * dpr);
+    const physH = Math.round(H * dpr);
+    if (!mapCache || mapCache.width !== physW || mapCache.height !== physH) {
+        mapCache = buildMapCache(W, H, waypoints, dpr);
     }
-    ctx.drawImage(mapCache, 0, 0);
+    ctx.drawImage(mapCache, 0, 0, W, H);
 }
 
-function buildMapCache(W, H, waypoints) {
+function buildMapCache(W, H, waypoints, dpr = 1) {
     const offscreen = document.createElement('canvas');
-    offscreen.width  = W;
-    offscreen.height = H;
+    offscreen.width  = Math.round(W * dpr);
+    offscreen.height = Math.round(H * dpr);
     const c = offscreen.getContext('2d');
+    c.scale(dpr, dpr);
 
     // 기본 잔디색
     c.fillStyle = '#5a8a3a';
