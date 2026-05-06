@@ -83,18 +83,21 @@ function renderDetail(detail, tower, grid) {
                 <div class="stat-bg">
                     <div class="stat-fill" style="background:#aa1800;width:${Math.min(tower.damage / DMG_MAX * 100, 100)}%"></div>
                 </div>
+                <div class="ulist-stat-val">${tower.damage}</div>
             </div>
             <div class="ulist-stat-row">
                 <div class="stat-lbl">SPD</div>
                 <div class="stat-bg">
                     <div class="stat-fill" style="background:#2a8a00;width:${Math.min(tower.attackSpeed / SPD_MAX * 100, 100)}%"></div>
                 </div>
+                <div class="ulist-stat-val">${tower.attackSpeed}</div>
             </div>
             <div class="ulist-stat-row">
                 <div class="stat-lbl">RNG</div>
                 <div class="stat-bg">
                     <div class="stat-fill" style="background:#0a2aaa;width:${Math.min(tower.range / RNG_MAX * 100, 100)}%"></div>
                 </div>
+                <div class="ulist-stat-val">${tower.range}</div>
             </div>
             ${meta.passive ? (Array.isArray(meta.passive) ? meta.passive : [meta.passive]).map((p, i) => {
                 const desc = Array.isArray(meta.passiveDesc) ? meta.passiveDesc[i] : meta.passiveDesc;

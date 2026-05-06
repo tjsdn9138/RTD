@@ -228,3 +228,43 @@ export function initUI() {
   renderUnitPanel(panels.unit);
   updateHUD();
 }
+
+// 단축키
+document.addEventListener('keydown', e => {
+  if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+
+  // Space: 웨이브 시작/다음/재시도
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!elBtnStart.disabled) elBtnStart.click();
+    return;
+  }
+
+  // 위/아래 화살표: 배속 순환
+  if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+    e.preventDefault();
+    const dir  = e.code === 'ArrowUp' ? 1 : -1;
+    const next = SPEEDS[(SPEEDS.indexOf(game.gameSpeed) + dir + SPEEDS.length) % SPEEDS.length];
+    game.gameSpeed = next;
+    elBtnSpeed.textContent = `${next}×`;
+    return;
+  }
+
+  // A: 전투 중 자동 출전 토글
+  if (e.code === 'KeyA' && game.state === STATE.BATTLE) {
+    game.autoSpawn = !game.autoSpawn;
+    game.spawnTimer = 0;
+    refreshUnitPanelInner();
+    return;
+  }
+
+  // 숫자키 1~9, 0: 전투 중 유닛 스폰 (0 = 10번째)
+  if (game.state !== STATE.BATTLE) return;
+  const digit = e.key === '0' ? 10 : parseInt(e.key);
+  if (isNaN(digit) || digit < 1 || digit > 10) return;
+  const unit = game.units[digit - 1];
+  if (!unit || unit.spawned) return;
+  e.preventDefault();
+  document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));
+  refreshUnitPanelInner();
+});
