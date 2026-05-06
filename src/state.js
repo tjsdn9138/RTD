@@ -96,7 +96,7 @@ export function checkWaveEnd() {
 // 실패 보상 계산
 // TODO: 수치 조정
 export function getFailReward() {
-    return Math.floor(game.waveNumber * 3);
+    return Math.floor(game.waveNumber * 100);
 }
 
 // 목숨 감소 — 0이 되면 게임 오버
