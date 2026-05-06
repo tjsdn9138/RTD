@@ -236,7 +236,7 @@ export class HealUnit extends Unit {
         type: 'HealUnit', name: '힐주는넘', rarity: 'UNCOMMON',
         ico: '힐', bg: '#f8d0e8', fg: '#8a0050',
         hp: 300, speed: 200, level: 1,
-        hpPlus: 35, speedPlus: 10, healPlus: 100,
+        hpPlus: 35, speedPlus: 10, healPlus: 50,
         passive: '힐', heal: 100,
         passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 아군 한명의 체력을 ${heal}만큼 회복시킵니다.`,
     };

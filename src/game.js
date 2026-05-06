@@ -140,8 +140,8 @@ export function checkItemLevelUp(type) {
     while (item.count >= required) {
         item.count -= required;
         meta.level++;
-        if ('LevelUpMul' in meta)        meta.multiplier = parseFloat((meta.multiplier * meta.LevelUpMul).toFixed(4));
-        else if ('LevelUpBonus' in meta) meta.bonus += meta.LevelUpBonus;
+        if ('multiplier' in meta)    meta.multiplier = parseFloat((meta.multiplier + meta.LevelUpPlus).toFixed(4));
+        else if ('bonus' in meta)    meta.bonus += meta.LevelUpPlus;
         required = getLevelUpCost(meta.level).items;
     }
 }
