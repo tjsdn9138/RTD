@@ -3,7 +3,7 @@ import { TOWER_CLASSES } from './towers.js';
 import { ITEM_CLASSES, ITEM_CLASS } from './items.js';
 
 export * from './state.js';
-import { MAX_UNIT_LEVEL, MAX_SLOTS, game, getLevelUpCost } from './state.js';
+import { MAX_UNIT_LEVEL, MAX_TOWER_LEVEL, MAX_SLOTS, game, getLevelUpCost } from './state.js';
 
 // 희귀도 정보
 // TODO: 확률 조정
@@ -22,6 +22,16 @@ export const GACHA_COST = {
     unit: 25,
     item: 100,
 };
+
+// 만렙 기준 스탯 최댓값
+const _UNIT_LV_SUM  = MAX_UNIT_LEVEL  - 1;
+const _TOWER_LV_SUM = MAX_TOWER_LEVEL - 1;
+const _TOWER_LV_SPD = MAX_TOWER_LEVEL / 5;
+export const UNIT_HP_MAX   = Math.max(...UNIT_CLASSES.map(C => C.meta.hp    + C.meta.hpPlus    * _UNIT_LV_SUM));
+export const UNIT_SPD_MAX  = Math.max(...UNIT_CLASSES.map(C => C.meta.speed + C.meta.speedPlus * _UNIT_LV_SUM));
+export const TOWER_DMG_MAX = Math.max(...TOWER_CLASSES.map(C => C.meta.damage      + C.meta.dmgPlus   * _TOWER_LV_SUM));
+export const TOWER_SPD_MAX = Math.max(...TOWER_CLASSES.map(C => C.meta.attackSpeed + C.meta.speedPlus * _TOWER_LV_SPD));
+export const TOWER_RNG_MAX = Math.max(...TOWER_CLASSES.map(C => C.meta.range       + C.meta.rangePlus * _TOWER_LV_SPD));
 
 // 보유 유닛
 export const ownedUnits = UNIT_CLASSES.map(Cls => ({
@@ -60,11 +70,15 @@ export const deploySlots = Array(MAX_SLOTS).fill(null);
 export function levelUpTower(tower) {
     const meta = tower.constructor.meta;
     if (!meta) return false;
+    if (tower.level >= MAX_TOWER_LEVEL) return false;
 
+    tower.damage = Math.floor(tower.damage + meta.dmgPlus);
     tower.level++;
-    tower.damage = Math.floor(tower.damage * meta.damageMul);
-    tower.attackSpeed = parseFloat((tower.attackSpeed * meta.speedMul).toFixed(4));
-    if (tower.level % 5 === 0) tower.range = Math.floor(tower.range * meta.rangeMul);
+
+    if (tower.level % 5 === 0) {
+        tower.attackSpeed = parseFloat((tower.attackSpeed + meta.speedPlus).toFixed(4));
+        tower.range       = Math.floor(tower.range + meta.rangePlus);
+    }
     return true;
 }
 
@@ -87,19 +101,25 @@ export function levelUpUnit(type) {
     owned.count += 1;
     game.gold   -= cost.gold;
 
+    meta.hp    = Math.floor(meta.hp    + meta.hpPlus);
+    meta.speed = Math.floor(meta.speed + meta.speedPlus);
     meta.level++;
-    meta.hp    = Math.floor(meta.hp    * meta.hpMul);
-    meta.speed = Math.floor(meta.speed * meta.speedMul);
 
     if (meta.level % 5 === 0) {
         if ('defense' in meta) {
-            meta.defense = Math.floor(meta.defense * meta.defMul);
+            meta.defense += meta.defPlus;
         }
         if ('timePlus' in meta) {
             meta.time = parseFloat((meta.time + meta.timePlus).toFixed(2));
         }
         if ('dodgeProb' in meta) {
-            meta.dodgeProb = parseFloat((meta.dodgeProb * meta.dodgeMul).toFixed(2));
+            meta.dodgeProb = parseFloat((meta.dodgeProb + meta.dodgePlus).toFixed(2));
+        }
+        if ('heal' in meta) {
+            meta.heal += meta.healPlus;
+        }
+        if ('decDamage' in meta) {
+            meta.decDamage = meta.decDamage + meta.decPlus;
         }
     }
 

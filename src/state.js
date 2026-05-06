@@ -14,7 +14,7 @@ export const game = {
     gold: 100,
     unitSlots: 2,
     spawnTimer: 0,
-    spawnInterval: 0.5,
+    spawnInterval: 0.25,
     spawnCount: 0,
     survivedCount: 0,
     deadCount: 0,
@@ -27,9 +27,10 @@ export const game = {
     autoSpawn: false,  // 자동 출전 활성화 여부
 };
 
-export const MAX_SLOTS      = 10; // 유닛 최대 개수
-export const MAX_UNIT_LEVEL = 20; // 유닛 최대 레벨
-export const MAX_WAVES      = 40; // 총 웨이브 수
+export const MAX_SLOTS       = 10; // 유닛 최대 개수
+export const MAX_UNIT_LEVEL  = 20; // 유닛 최대 레벨
+export const MAX_TOWER_LEVEL = 20; // 타워 최대 레벨
+export const MAX_WAVES       = 40; // 총 웨이브 수
 
 // 유닛 슬롯 추가 가격 계산
 // TODO: 수치 조정

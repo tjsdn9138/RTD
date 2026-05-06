@@ -1,10 +1,9 @@
-import { game, RARITY } from '../game.js';
+import { game, RARITY, TOWER_DMG_MAX, TOWER_SPD_MAX, TOWER_RNG_MAX } from '../game.js';
 import { TOWER_CLASSES } from '../towers.js';
 
-// TODO: 수치 조정
-const DMG_MAX = 2000;
-const RNG_MAX = 500;
-const SPD_MAX = 5;
+const DMG_MAX = TOWER_DMG_MAX;
+const SPD_MAX = TOWER_SPD_MAX;
+const RNG_MAX = TOWER_RNG_MAX;
 
 let selectedType = null;
 

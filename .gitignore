@@ -1,6 +1,7 @@
 # Claude Code 내부 파일
 memory/
 .claude/
+CLAUDE.md
 
 # 기획 문서
 document/

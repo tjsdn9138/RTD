@@ -1,4 +1,4 @@
-import { ownedUnits, deploySlots, MAX_UNIT_LEVEL, getLevelUpCost, levelUpUnit, game, RARITY } from '../game.js';
+import { ownedUnits, deploySlots, MAX_UNIT_LEVEL, getLevelUpCost, levelUpUnit, game, RARITY, UNIT_HP_MAX, UNIT_SPD_MAX } from '../game.js';
 import { UNIT_CLASSES } from '../units.js';
 import { updateHUD } from './ui.js';
 
@@ -6,8 +6,8 @@ function getMeta(type) {
     return UNIT_CLASSES.find(C => C.name === type)?.meta;
 }
 
-const HP_MAX  = 2000;
-const SPD_MAX = 1000;
+const HP_MAX  = UNIT_HP_MAX;
+const SPD_MAX = UNIT_SPD_MAX;
 
 let selectedType = null;
 
@@ -76,23 +76,23 @@ function renderDetail(detail, owned, grid) {
     const canLevelUp = canUnit && canGold;
     const fillPct  = Math.min(owned.count / cost.units, 1) * 100;
 
-    const nextHp    = Math.floor(m.hp    * m.hpMul);
-    const nextSpeed = Math.floor(m.speed * m.speedMul);
+    const nextHp    = Math.floor(m.hp    + m.hpPlus);
+    const nextSpeed = Math.floor(m.speed + m.speedPlus);
     const nextLevel = m.level + 1;
     const nextDef   = 'defense'   in m && nextLevel % 5 === 0
-        ? Math.floor(m.defense * m.defMul)
+        ? m.defense + m.defPlus
         : null;
     const nextDodge = 'dodgeProb' in m && !isMax && nextLevel % 5 === 0
-        ? parseFloat((m.dodgeProb * m.dodgeMul).toFixed(2))
+        ? parseFloat((m.dodgeProb + m.dodgePlus).toFixed(2))
         : null;
     const nextTime  = 'timePlus'  in m && nextLevel % 5 === 0
         ? parseFloat((m.time + m.timePlus).toFixed(2))
         : null;
     const nextDec   = 'decDamage' in m && nextLevel % 5 === 0
-        ? Math.floor(m.decDamage * m.decMul)
+        ? m.decDamage + m.decPlus
         : null;
-    const nextHeal  = 'heal'      in m && nextLevel % 5 === 0
-        ? Math.floor(m.heal * m.healMul)
+    const nextHeal  = 'heal' in m && nextLevel % 5 === 0
+        ? m.heal + m.healPlus
         : null;
 
     detail.innerHTML = `

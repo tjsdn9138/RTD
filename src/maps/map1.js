@@ -15,10 +15,9 @@ export function getWaypoints(W, H) {
 export function getTowerSlots(W, H) {
     return [
         // 1번 직선 위
-        { x: W * 0.20, y: H * 0.14 },
-        { x: W * 0.40, y: H * 0.14 },
-        { x: W * 0.60, y: H * 0.14 },
-        { x: W * 0.85, y: H * 0.14 },
+        { x: W * 0.30, y: H * 0.14 },
+        { x: W * 0.50, y: H * 0.14 },
+        { x: W * 0.70, y: H * 0.14 },
         // 1번+2번 사이 커버
         { x: W * 0.20, y: H * 0.37 },
         { x: W * 0.40, y: H * 0.37 },
@@ -30,10 +29,9 @@ export function getTowerSlots(W, H) {
         { x: W * 0.60, y: H * 0.62 },
         { x: W * 0.80, y: H * 0.62 },
         // 3번 직선 아래
-        { x: W * 0.15, y: H * 0.86 },
-        { x: W * 0.40, y: H * 0.86 },
-        { x: W * 0.60, y: H * 0.86 },
-        { x: W * 0.80, y: H * 0.86 },
+        { x: W * 0.30, y: H * 0.86 },
+        { x: W * 0.50, y: H * 0.86 },
+        { x: W * 0.70, y: H * 0.86 },
     ];
 }
 

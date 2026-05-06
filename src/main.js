@@ -1,7 +1,7 @@
 import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel } from './ui/ui.js';
 import { loadGame, deleteSave } from './save.js';
 import { initTitleScreen } from './ui/title.js';
-import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, underWeightedPick } from './game.js';
+import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, underWeightedPick, MAX_TOWER_LEVEL } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
 import { applyPassiveItems } from './items.js';
@@ -114,7 +114,18 @@ function resizeCanvas() {
             }
         });
     }
+    setUIScale();
 }
+
+// 뷰포트 크기에 따라 UI 전체 스케일 계산 (브라우저 zoom과 무관)
+function setUIScale() {
+    const scaleH = window.innerHeight / 768;
+    const scaleW = (window.innerWidth * 0.4) / 640;
+    const scale  = Math.max(0.7, Math.min(1.4, Math.min(scaleH, scaleW)));
+    document.documentElement.style.setProperty('--ui-scale', scale);
+}
+setUIScale();
+
 // 창 크기 변경 시 실행 (브라우저 zoom 변경은 무시)
 // Chrome  zoom: innerWidth × dpr 일정 (dpr 같이 변함)
 // Safari  zoom: outerWidth 일정   (dpr 안 변하고 innerWidth만 줄어듦)
@@ -183,7 +194,7 @@ document.addEventListener('nextwavestart', () => {
         }
     } 
     else {
-        const existList = game.towers.filter(Boolean);
+        const existList = game.towers.filter(t => t && t.level < MAX_TOWER_LEVEL);
         if (existList.length > 0) {
             const tower = existList[Math.floor(Math.random() * existList.length)];
             levelUpTower(tower);
@@ -207,6 +218,7 @@ canvas.addEventListener('click', (e) => {
     let used = false;
     game.towers.forEach(tower => {
         if (!tower || tower.stopped) return;
+        if (tower.constructor.name === 'AllRoundTower') return;
         const dx = mx - tower.x;
         const dy = my - tower.y;
         if (Math.sqrt(dx * dx + dy * dy) < 20) {

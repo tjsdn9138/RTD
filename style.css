@@ -47,6 +47,7 @@ body {
   min-width: 400px;
   max-width: 640px;
   overflow: visible;
+  zoom: var(--ui-scale, 1);
 }
 
 /* 패널 영역 */
@@ -614,29 +615,36 @@ body {
 .owned-count span { color: #2a1a0a; }
 
 /* 스탯 미리보기 */
-.stat-preview {
-  margin-top: 10px;
-  padding: 14px 16px;
+.unit-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: 200px;
+  padding: 10px 12px;
   border: 3px solid #8a7a5a;
   background: #f0e8d0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tooltip-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 .preview-ico {
   flex-shrink: 0;
   image-rendering: pixelated;
-  width: 48px !important;
-  height: 48px !important;
-  font-size: 16px !important;
-}
-
-.preview-info {
-  flex: 1;
+  width: 36px;
+  height: 36px;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  font-family: 'NeoDunggeunmo', monospace;
+  font-size: 14px;
 }
 
 .preview-name {
@@ -835,7 +843,29 @@ body {
         inset -2px -2px 0 #2a4acc;
 }
 
+.shop-btn-group {
+    display: flex;
+    gap: 6px;
+}
+
 .shop-result { min-height: 60px; }
+
+.shop-result-multi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.shop-result-multi .shop-result-card {
+    flex: 1 1 calc(20% - 4px);
+    min-width: 0;
+    padding: 6px 4px;
+}
+
+.shop-result-multi .shop-result-name {
+    font-size: 11px;
+    word-break: keep-all;
+}
 
 .shop-result-card {
     border: 3px solid;
@@ -1253,6 +1283,7 @@ body {
         0 0 40px rgba(160, 20, 20, 0.35);
     image-rendering: pixelated;
     animation: gameover-slidein 0.4s cubic-bezier(0.2, 0.8, 0.4, 1);
+    zoom: var(--ui-scale, 1);
 }
 
 @keyframes gameover-slidein {
@@ -1360,6 +1391,7 @@ body {
         inset 0 0 0 2px #1a2444,
         0 0 32px rgba(60, 80, 180, 0.25);
     image-rendering: pixelated;
+    zoom: var(--ui-scale, 1);
 }
 
 #title-logo {
@@ -1510,6 +1542,7 @@ body {
     font-family: 'NeoDunggeunmo', monospace;
     image-rendering: pixelated;
     box-shadow: 6px 6px 0 #4a3a1a;
+    zoom: var(--ui-scale, 1);
 }
 
 #tutorial-header {

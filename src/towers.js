@@ -91,7 +91,7 @@ export class NormalTower extends Tower {
     static meta = {
         name: '일반 타워', rarity: 'COMMON',
         damage: 100, attackSpeed: 1, range: 200,
-        damageMul: 1.1, speedMul: 1.1, rangeMul: 1.2,
+        dmgPlus: 10, speedPlus: 0.1, rangePlus: 20,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -107,7 +107,7 @@ export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
         damage: 220, attackSpeed: 0.5, range: 160,
-        damageMul: 1.1, speedMul: 1.15, rangeMul: 1.3,
+        dmgPlus: 22, speedPlus: 0.05, rangePlus: 20,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -123,7 +123,7 @@ export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
         damage: 40, attackSpeed: 2, range: 240,
-        damageMul: 1.2, speedMul: 1.05, rangeMul: 1.1,
+        dmgPlus: 4, speedPlus: 0.2, rangePlus: 24,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -139,7 +139,7 @@ export class SkyTower extends Tower {
     static meta = {
         name: '공중 타워', rarity: 'UNCOMMON',
         damage: 60, attackSpeed: 1.2, range: 240,
-        damageMul: 1.1, speedMul: 1.1, rangeMul: 1.1,
+        dmgPlus: 6, speedPlus: 0.12, rangePlus: 24,
         passive: '공중', skyMul : 2,
         passiveDesc: (mul) => `비행 유닛을 공격 시 데미지가 ${mul}배 증가하며,\n비행 유닛을 우선 공격합니다.`,
     };
@@ -212,7 +212,7 @@ export class InfraredTower extends Tower {
     static meta = {
         name: '적외선 타워', rarity: 'UNCOMMON',
         damage: 200, attackSpeed: 0.8, range: 240,
-        damageMul: 1.2, speedMul: 1.1, rangeMul: 1.1,
+        dmgPlus: 20, speedPlus: 0.08, rangePlus: 24,
         passive: '적외선',
         passiveDesc: '은신한 유닛 공격 가능 및 은신한 유닛 우선 공격',
     };
@@ -280,7 +280,7 @@ export class PoisonTower extends Tower {
     static meta = {
         name: '독 타워', rarity: 'UNCOMMON',
         damage: 30, attackSpeed: 1.2, range: 240,
-        damageMul: 1.3, speedMul: 1.1, rangeMul: 1.1,
+        dmgPlus: 4, speedPlus: 0.12, rangePlus: 24,
         passive: '독', poisonTime: 3,
         passiveDesc: (time) => `${time}초에 걸쳐 도트 데미지를 받습니다.\n독에 걸린 유닛은 받는 회복량이 50% 감소됩니다.`,
     };
@@ -352,7 +352,7 @@ export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
         damage: 50, attackSpeed: 1, range: 160,
-        damageMul: 1.2, speedMul: 1.05, rangeMul: 1.2,
+        dmgPlus: 5, speedPlus: 0.1, rangePlus: 16,
         passive:     ['전방위', '지상'],
         passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.', '비행 유닛을 공격할 수 없습니다.'],
     };
@@ -394,7 +394,7 @@ export class ChainTower extends Tower {
     static meta = {
         name: '전이 타워', rarity: 'RARE',
         damage: 100, attackSpeed: 0.7, range: 160,
-        damageMul: 1.2, speedMul: 1.1, rangeMul: 1.2,
+        dmgPlus: 10, speedPlus: 0.07, rangePlus: 16,
         passive: '전이', decDamage: 50,
         passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
     };
@@ -493,8 +493,8 @@ export class ChainTower extends Tower {
 export class SniperTower extends Tower {
     static meta = {
         name: '저격 타워', rarity: 'HERO',
-        damage: 500, attackSpeed: 0.1, range: 400,
-        damageMul: 1.2, speedMul: 1, rangeMul: 1.1,
+        damage: 500, attackSpeed: 0.2, range: 400,
+        dmgPlus: 50, speedPlus: 0.02, rangePlus: 40,
         passive: '저격',
         passiveDesc: '체력이 가장 낮은 적을 우선 공격하며,\nHP 10% 이하의 적을 즉시 처형합니다.',
     };
@@ -555,9 +555,9 @@ export class AllRoundTower extends Tower {
     static meta = {
         name: '만능 타워', rarity: 'LEGEND',
         damage: 100, attackSpeed: 1, range: 200,
-        damageMul: 1.1, speedMul: 1.1, rangeMul: 1.2,
+        dmgPlus: 10, speedPlus: 0.1, rangePlus: 20,
         passive: '만능',
-        passiveDesc: '이때까지 나온 타워들에 비례해 강해집니다.',
+        passiveDesc: '모든 해로운 효과에 면역이 되며,\n이때까지 나온 타워들에 비례해 강해집니다.',
     };
     constructor(x, y) {
         super(x, y);

@@ -7,24 +7,16 @@ import { updateHUD } from './ui.js';
 export function renderShopPanel(container) {
     container.innerHTML = '';
 
-    container.appendChild(makeGachaSection(
-        '유닛 뽑기',
-        GACHA_COST.unit,
-        'UnitGachaTicket',
-        () => doGacha('unit')
-    ));
-    container.appendChild(makeGachaSection(
-        '아이템 뽑기',
-        GACHA_COST.item,
-        'ItemGachaTicket',
-        () => doGacha('item')
-    ));
+    const allUpdateBtns = [];
+
+    container.appendChild(makeGachaSection('유닛 뽑기',   GACHA_COST.unit,  'UnitGachaTicket', 'unit',  allUpdateBtns));
+    container.appendChild(makeGachaSection('아이템 뽑기', GACHA_COST.item, 'ItemGachaTicket', 'item', allUpdateBtns));
 
     container.appendChild(makeProbTable());
 }
 
 // 가챠 섹션 만들기
-function makeGachaSection(title, cost, ticketType, onGacha) {
+function makeGachaSection(title, cost, ticketType, kind, allUpdateBtns) {
     const section = document.createElement('div');
     section.className = 'shop-section';
 
@@ -35,25 +27,52 @@ function makeGachaSection(title, cost, ticketType, onGacha) {
     h.className = 'shop-section-title';
     h.textContent = title;
 
-    const btn = document.createElement('button');
-    btn.className = 'shop-btn';
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'shop-btn-group';
+
+    const btn1 = document.createElement('button');
+    btn1.className = 'shop-btn';
+
+    const btn10 = document.createElement('button');
+    btn10.className = 'shop-btn';
 
     const updateBtn = () => {
         const count = inventory.find(i => i.type === ticketType)?.count ?? 0;
-        btn.innerHTML = count > 0 ? `🎫 1 / ${count}` : `🪙 ${cost} 뽑기`;
+        btn1.innerHTML = count > 0 ? `🎫 1 / ${count}` : `🪙 ${cost}`;
+
+        const ticketsToUse = Math.min(count, 10);
+        const goldNeeded   = (10 - ticketsToUse) * cost;
+        if (count >= 10) {
+            btn10.innerHTML = `🎫 × 10`;
+        } else if (count > 0) {
+            btn10.innerHTML = `🎫 ${count} + 🪙 ${goldNeeded}`;
+        } else {
+            btn10.innerHTML = `🪙 ${cost} × 10`;
+        }
     };
+    allUpdateBtns.push(updateBtn);
     updateBtn();
 
-    btn.addEventListener('click', () => {
-        const result = onGacha();
+    btn1.addEventListener('click', () => {
+        const result = doGacha(kind);
         if (!result) return;
-        updateBtn();
-        showResult(section, result);
+        allUpdateBtns.forEach(u => u());
+        showResults(section, [result]);
         updateHUD();
     });
 
+    btn10.addEventListener('click', () => {
+        const results = doGacha10(kind);
+        if (!results) return;
+        allUpdateBtns.forEach(u => u());
+        showResults(section, results);
+        updateHUD();
+    });
+
+    btnGroup.appendChild(btn1);
+    btnGroup.appendChild(btn10);
     header.appendChild(h);
-    header.appendChild(btn);
+    header.appendChild(btnGroup);
     section.appendChild(header);
 
     const resultArea = document.createElement('div');
@@ -88,30 +107,50 @@ function doGacha(kind) {
         if (Cls.meta.kind === 'passive') checkItemLevelUp(Cls.name);
     }
 
-    return Cls.meta;  // showResult에서 name, rarity 필요
+    return Cls.meta;
 }
 
-function showResult(section, meta) {
+function doGacha10(kind) {
+    const ticketType = kind === 'unit' ? 'UnitGachaTicket' : 'ItemGachaTicket';
+    const ticket = inventory.find(i => i.type === ticketType);
+    const ticketCount  = ticket?.count ?? 0;
+    const ticketsToUse = Math.min(ticketCount, 10);
+    const goldNeeded   = (10 - ticketsToUse) * GACHA_COST[kind];
+
+    if (game.gold < goldNeeded) return null;
+
+    const results = [];
+    for (let i = 0; i < 10; i++) {
+        const result = doGacha(kind);
+        if (result) results.push(result);
+    }
+    return results.length > 0 ? results : null;
+}
+
+function showResults(section, metas) {
     const area = section.querySelector('.shop-result');
-    const rarity = RARITY[meta.rarity];
-
     area.innerHTML = '';
-    const card = document.createElement('div');
-    card.className = 'shop-result-card';
-    card.style.borderColor = rarity.color;
+    area.classList.toggle('shop-result-multi', metas.length > 1);
 
-    const rarityTag = document.createElement('div');
-    rarityTag.className = 'shop-result-rarity';
-    rarityTag.style.color = rarity.color;
-    rarityTag.textContent = rarity.name;
+    metas.forEach(meta => {
+        const rarity = RARITY[meta.rarity];
+        const card = document.createElement('div');
+        card.className = 'shop-result-card';
+        card.style.borderColor = rarity.color;
 
-    const name = document.createElement('div');
-    name.className = 'shop-result-name';
-    name.textContent = meta.name;
+        const rarityTag = document.createElement('div');
+        rarityTag.className = 'shop-result-rarity';
+        rarityTag.style.color = rarity.color;
+        rarityTag.textContent = rarity.name;
 
-    card.appendChild(rarityTag);
-    card.appendChild(name);
-    area.appendChild(card);
+        const name = document.createElement('div');
+        name.className = 'shop-result-name';
+        name.textContent = meta.name;
+
+        card.appendChild(rarityTag);
+        card.appendChild(name);
+        area.appendChild(card);
+    });
 }
 
 function makeProbTable() {
