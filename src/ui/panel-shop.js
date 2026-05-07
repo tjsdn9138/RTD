@@ -1,4 +1,4 @@
-import { game, inventory, ownedUnits, RARITY, GACHA_COST, weightedPick, checkItemLevelUp } from '../game.js';
+import { game, inventory, ownedUnits, RARITY, getGachaCost, getGachaCostRange, weightedPick, checkItemLevelUp } from '../game.js';
 import { UNIT_CLASSES } from '../units.js';
 import { ITEM_CLASSES } from '../items.js';
 import { updateHUD } from './ui.js';
@@ -9,14 +9,14 @@ export function renderShopPanel(container) {
 
     const allUpdateBtns = [];
 
-    container.appendChild(makeGachaSection('유닛 뽑기',   GACHA_COST.unit,  'UnitGachaTicket', 'unit',  allUpdateBtns));
-    container.appendChild(makeGachaSection('아이템 뽑기', GACHA_COST.item, 'ItemGachaTicket', 'item', allUpdateBtns));
+    container.appendChild(makeGachaSection('유닛 뽑기',   'UnitGachaTicket', 'unit',  allUpdateBtns));
+    container.appendChild(makeGachaSection('아이템 뽑기', 'ItemGachaTicket', 'item', allUpdateBtns));
 
     container.appendChild(makeProbTable());
 }
 
 // 가챠 섹션 만들기
-function makeGachaSection(title, cost, ticketType, kind, allUpdateBtns) {
+function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
     const section = document.createElement('div');
     section.className = 'shop-section';
 
@@ -37,17 +37,19 @@ function makeGachaSection(title, cost, ticketType, kind, allUpdateBtns) {
     btn10.className = 'shop-btn';
 
     const updateBtn = () => {
-        const count = inventory.find(i => i.type === ticketType)?.count ?? 0;
+        const cost         = getGachaCost(kind);
+        const count        = inventory.find(i => i.type === ticketType)?.count ?? 0;
+        const ticketsToUse = Math.min(count, 10);
+        const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind] + ticketsToUse, 10 - ticketsToUse);
+
         btn1.innerHTML = count > 0 ? `🎫 1 / ${count}` : `🪙 ${cost}`;
 
-        const ticketsToUse = Math.min(count, 10);
-        const goldNeeded   = (10 - ticketsToUse) * cost;
         if (count >= 10) {
             btn10.innerHTML = `🎫 × 10`;
         } else if (count > 0) {
             btn10.innerHTML = `🎫 ${count} + 🪙 ${goldNeeded}`;
         } else {
-            btn10.innerHTML = `🪙 ${cost} × 10`;
+            btn10.innerHTML = `🪙 ${goldNeeded}`;
         }
     };
     allUpdateBtns.push(updateBtn);
@@ -88,10 +90,11 @@ function doGacha(kind) {
     if (ticket) {
         ticket.count--;
     } else {
-        const cost = GACHA_COST[kind];
+        const cost = getGachaCost(kind);
         if (game.gold < cost) return null;
         game.gold -= cost;
     }
+    game.gachaPulls[kind]++;
 
     const classes = kind === 'unit' ? UNIT_CLASSES : ITEM_CLASSES;
     const Cls = weightedPick(classes);
@@ -115,7 +118,7 @@ function doGacha10(kind) {
     const ticket = inventory.find(i => i.type === ticketType);
     const ticketCount  = ticket?.count ?? 0;
     const ticketsToUse = Math.min(ticketCount, 10);
-    const goldNeeded   = (10 - ticketsToUse) * GACHA_COST[kind];
+    const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind] + ticketsToUse, 10 - ticketsToUse);
 
     if (game.gold < goldNeeded) return null;
 

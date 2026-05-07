@@ -16,7 +16,8 @@ export class Unit {
         this.isPoisoned      = false;
         this.poisonTimer     = 0;
         this.poisonDps       = 0;
-        this.damageReduction = 0;
+        this.damageReduction  = 0;
+        this.distanceTraveled = 0;
     }
 
     // 유닛 생성
@@ -60,6 +61,7 @@ export class Unit {
         const moveAmount = this.speed * (deltaTime / 1000);
 
         if (distance <= moveAmount) {
+            this.distanceTraveled += distance;
             this.x = target.x;
             this.y = target.y;
             this.waypointIndex++;
@@ -71,6 +73,7 @@ export class Unit {
             return;
         }
 
+        this.distanceTraveled += moveAmount;
         const nx = dx / distance;
         const ny = dy / distance;
         this.x += nx * moveAmount;
@@ -159,8 +162,8 @@ export class FastUnit extends Unit {
     static meta = {
         type: 'FastUnit', name: '빠른넘', rarity: 'COMMON',
         ico: '빠', bg: '#c0e8c0', fg: '#2a8a00',
-        hp: 300, speed: 300, level: 1,
-        hpPlus: 30, speedPlus: 15,
+        hp: 330, speed: 300, level: 1,
+        hpPlus: 33, speedPlus: 15,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -236,8 +239,8 @@ export class HealUnit extends Unit {
         type: 'HealUnit', name: '힐주는넘', rarity: 'UNCOMMON',
         ico: '힐', bg: '#f8d0e8', fg: '#8a0050',
         hp: 300, speed: 200, level: 1,
-        hpPlus: 35, speedPlus: 10, healPlus: 50,
-        passive: '힐', heal: 100,
+        hpPlus: 35, speedPlus: 10, healPlus: 30,
+        passive: '힐', heal: 50,
         passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 아군 한명의 체력을 ${heal}만큼 회복시킵니다.`,
     };
 
@@ -331,7 +334,7 @@ export class BuffUnit extends Unit {
         ico: '버', bg: '#fff8d0', fg: '#7a5a00',
         hp: 400, speed: 200, level: 1,
         hpPlus: 45, speedPlus: 10, decPlus: 5,
-        passive: '버프', decDamage: 10,
+        passive: '버프', decDamage: 5,
         passiveDesc: (dec) => `범위 내 아군의 받는 피해량이 ${dec}% 감소합니다.`,
     };
 
@@ -398,8 +401,8 @@ export class InvisibleUnit extends Unit {
     static meta = {
         type: 'InvisibleUnit', name: '투명한넘', rarity: 'HERO',
         ico: '투', bg: '#e0e0e8', fg: '#5a5a7a',
-        hp: 300, speed: 250, level: 1,
-        hpPlus: 35, speedPlus: 15, timePlus: 0.5,
+        hp: 350, speed: 250, level: 1,
+        hpPlus: 40, speedPlus: 20, timePlus: 0.5,
         passive: '투명', time: 1,
         passiveDesc: (time) => `2초마다 ${time}초 동안 타겟이 되지 않습니다.`,
     };
@@ -465,11 +468,86 @@ export class EvadeUnit extends Unit {
     }
 }
 
+export class TimeUnit extends Unit {
+    static meta = {
+        type: 'TimeUnit', name: '시간돌리는넘', rarity: 'LEGEND',
+        ico: '시', bg: '#f0e8f8', fg: '#4a1a6a',
+        hp: 450, speed: 200, level: 1,
+        hpPlus: 60, speedPlus: 25, returnPlus: 15,
+        passive: '시간역행', returnHp: 40,
+        passiveDesc: (prob) => `사망 직전 체력을 ${prob}% 회복하며 시간을 되돌립니다.`,
+    };
+    constructor() {
+        super();
+        this.maxHp        = TimeUnit.meta.hp;
+        this.hp           = this.maxHp;
+        this.speed        = TimeUnit.meta.speed;
+        this.color        = '#6c3483';
+        this.returnHp     = TimeUnit.meta.returnHp;
+        this.reversed     = false;
+        this.reverseFlash = 0;
+    }
+
+    update(deltaTime, units) {
+        super.update(deltaTime, units);
+        if (this.reverseFlash > 0) {
+            this.reverseFlash = Math.max(0, this.reverseFlash - deltaTime / 600);
+        }
+    }
+
+    takeDamage(amount, units) {
+        const actualDamage = amount * (1 - this.damageReduction / 100);
+        if (!this.reversed && this.hp - actualDamage <= 0) {
+            this.reversed     = true;
+            this.reverseFlash = 1;
+            this.hp           = Math.floor(this.maxHp * (this.returnHp / 100));
+            this._reversePosition(this.distanceTraveled / 2);
+            return;
+        }
+        super.takeDamage(amount, units);
+    }
+
+    _reversePosition(targetDist) {
+        const wp = this.waypoints;
+        let cumDist = 0;
+        for (let i = 0; i < wp.length - 1; i++) {
+            const dx     = wp[i + 1].x - wp[i].x;
+            const dy     = wp[i + 1].y - wp[i].y;
+            const segLen = Math.sqrt(dx * dx + dy * dy);
+            if (cumDist + segLen >= targetDist) {
+                const t              = (targetDist - cumDist) / segLen;
+                this.x               = wp[i].x + dx * t;
+                this.y               = wp[i].y + dy * t;
+                this.waypointIndex   = i + 1;
+                this.distanceTraveled = targetDist;
+                return;
+            }
+            cumDist += segLen;
+        }
+        // targetDist가 0에 가까울 때 폴백
+        this.x                = wp[0].x;
+        this.y                = wp[0].y;
+        this.waypointIndex    = 1;
+        this.distanceTraveled = 0;
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        if (this.reverseFlash > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12 + 8 * (1 - this.reverseFlash), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(108, 52, 131, ${this.reverseFlash})`;
+            ctx.lineWidth   = 3;
+            ctx.stroke();
+        }
+    }
+}
+
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
     FlyUnit, ShieldUnit, HealUnit,
     TauntUnit, BuffUnit,
     InvisibleUnit,
-    EvadeUnit,
+    EvadeUnit, TimeUnit,
 ];
 export const UNIT_CLASS = Object.fromEntries(UNIT_CLASSES.map(Cls => [Cls.name, Cls]));

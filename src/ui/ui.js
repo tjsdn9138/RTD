@@ -49,22 +49,22 @@ const panels = {
 };
 const navBtns = document.querySelectorAll('.nav-btn');
 
+function showPanel(key) {
+  if (!panels[key]) return;
+  navBtns.forEach(b => b.classList.toggle('active', b.dataset.panel === key));
+  Object.values(panels).forEach(p => { if (p) p.classList.remove('active'); });
+  panels[key].classList.add('active');
+
+  if (key === 'unit')      renderUnitPanel(panels.unit);
+  if (key === 'unit-list') renderUnitListPanel(panels['unit-list']);
+  if (key === 'tower')     renderTowerPanel(panels['tower']);
+  if (key === 'bag')       renderBagPanel(panels.bag);
+  if (key === 'shop')      renderShopPanel(panels['shop']);
+}
+
 // 오른쪽 메뉴 변경 시
 navBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const key = btn.dataset.panel;
-    if (!panels[key]) return;
-    navBtns.forEach(b => b.classList.remove('active'));
-    Object.values(panels).forEach(p => { if (p) p.classList.remove('active'); });
-    btn.classList.add('active');
-    panels[key].classList.add('active');
-
-    if (key === 'unit')      renderUnitPanel(panels.unit);
-    if (key === 'unit-list') renderUnitListPanel(panels['unit-list']);
-    if (key === 'tower')     renderTowerPanel(panels['tower']);
-    if (key === 'bag')       renderBagPanel(panels.bag);
-    if (key === 'shop')      renderShopPanel(panels['shop']);
-  });
+  btn.addEventListener('click', () => showPanel(btn.dataset.panel));
 });
 
 export function updateHUD() {
@@ -155,6 +155,7 @@ elBtnStart.addEventListener('click', () => {
       });
       return;
     }
+    showPanel('unit');
     elBtnStart.dispatchEvent(new CustomEvent('wavestart', { detail: { units }, bubbles: true }));
   }
   else if (game.state === STATE.RESULT) {

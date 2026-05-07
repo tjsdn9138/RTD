@@ -12,10 +12,11 @@ export function hasSaveData() {
 
 export function saveGame() {
     const data = {
-        wave:      game.waveNumber,
-        lives:     game.lives,
-        gold:      game.gold,
-        unitSlots: game.unitSlots,
+        wave:       game.waveNumber,
+        lives:      game.lives,
+        gold:       game.gold,
+        unitSlots:  game.unitSlots,
+        gachaPulls: { ...game.gachaPulls },
 
         towers: game.towers.map(t => {
             if (!t) return null;
@@ -67,10 +68,11 @@ export function loadGame() {
     try {
         const data = JSON.parse(raw);
 
-        game.waveNumber = data.wave;
-        game.lives      = data.lives;
-        game.gold       = data.gold;
-        game.unitSlots  = data.unitSlots;
+        game.waveNumber  = data.wave;
+        game.lives       = data.lives;
+        game.gold        = data.gold;
+        game.unitSlots   = data.unitSlots;
+        game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
 
         // 타워 복원 (위치는 나중에 relocateTower() 가 처리)
         if (data.towers) {

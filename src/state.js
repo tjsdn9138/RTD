@@ -11,7 +11,7 @@ export const game = {
     state: STATE.READY,
     waveNumber: 1,
     lives: 3,
-    gold: 100,
+    gold: 10000,
     unitSlots: 2,
     spawnTimer: 0,
     spawnInterval: 0.25,
@@ -25,6 +25,7 @@ export const game = {
     pendingItem: null, // 사용 대기 중인 소비 아이템 type
     goldBonus: 0,
     autoSpawn: false,  // 자동 출전 활성화 여부
+    gachaPulls: { unit: 0, item: 0 },
 };
 
 export const MAX_SLOTS       = 10; // 유닛 최대 개수
@@ -62,7 +63,7 @@ export function buySlot() {
 export function getReward() {
     const defaultReward = game.waveNumber * 50;
     const extraReward = game.survivedCount > 1 ?
-        (game.survivedCount - 1) * (defaultReward / 2) : 0
+        (game.survivedCount - 1) * (defaultReward / 5) : 0
     const bonus = game.goldBonus || 0;
     return Math.floor(defaultReward + extraReward + bonus);
 }

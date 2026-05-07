@@ -18,10 +18,22 @@ export const RARITY = {
 
 // 뽑기 가격
 // TODO: 수치 조정
-export const GACHA_COST = {
-    unit: 25,
-    item: 100,
-};
+export function getGachaCost(kind) {
+    return getGachaCostAt(kind, game.gachaPulls[kind] ?? 0);
+}
+
+function getGachaCostAt(kind, pulls) {
+    if (kind === 'unit') return (Math.floor(pulls / 10) + 1) * 25;
+    if (kind === 'item') return (Math.floor(pulls / 10) + 1) * 100;
+    return 0;
+}
+
+// startPull번째 뽑기부터 count회의 총 골드 비용
+export function getGachaCostRange(kind, startPull, count) {
+    let total = 0;
+    for (let i = 0; i < count; i++) total += getGachaCostAt(kind, startPull + i);
+    return total;
+}
 
 // 만렙 기준 스탯 최댓값
 const _UNIT_LV_SUM  = MAX_UNIT_LEVEL  - 1;
