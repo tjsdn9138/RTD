@@ -94,8 +94,11 @@ function renderDetail(detail, owned, grid) {
     const nextHeal     = 'heal'     in m && nextLevel % 5 === 0
         ? m.heal + m.healPlus
         : null;
-    const nextReturnHp = 'returnHp' in m && !isMax && nextLevel % 5 === 0
+    const nextReturnHp = 'returnHp'  in m && !isMax && nextLevel % 5 === 0
         ? m.returnHp + m.returnPlus
+        : null;
+    const nextSplitNum = 'splitNum'  in m && !isMax && nextLevel % 5 === 0
+        ? m.splitNum + m.splitPlus
         : null;
 
     detail.innerHTML = `
@@ -160,7 +163,12 @@ function renderDetail(detail, owned, grid) {
                                                     String(m.returnHp),
                                                     `${m.returnHp} <span class="ulist-next-val" id="next-returnhp">→ ${nextReturnHp}</span>`
                                                   )
-                                                : m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? m.decDamage ?? m.heal ?? m.returnHp ?? 0)
+                                                : nextSplitNum !== null
+                                                    ? m.passiveDesc(m.splitNum).replace(
+                                                        String(m.splitNum),
+                                                        `${m.splitNum} <span class="ulist-next-val" id="next-splitnum">→ ${nextSplitNum}</span>`
+                                                      )
+                                                    : m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? m.decDamage ?? m.heal ?? m.returnHp ?? m.splitNum ?? 0)
                         : (m.passiveDesc ?? '')
                 }</div>
             </div>` : ''}

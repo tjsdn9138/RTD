@@ -551,6 +551,87 @@ export class SniperTower extends Tower {
     }
 }
 
+export class InfernoTower extends Tower {
+    static meta = {
+        name: '인페르노 타워', rarity: 'HERO',
+        damage: 50, attackSpeed: 0, range: 300,
+        dmgPlus: 5, speedPlus: 0, rangePlus: 30,
+        passive: '인페르노',
+        passiveDesc: '같은 대상을 오래 공격할수록 더 큰 피해를 입힙니다.',
+    };
+
+    constructor(x, y) {
+        super(x, y);
+        this.damage        = InfernoTower.meta.damage;
+        this.range         = InfernoTower.meta.range;
+        this.attackSpeed   = InfernoTower.meta.attackSpeed;
+        this.color         = '#7b1818';
+        this.currentTarget = null;
+        this.burnTime      = 0;
+    }
+
+    update(deltaTime, units) {
+        if (this.stopped) return;
+        const dt = deltaTime / 1000;
+
+        // 도발 유닛 우선 처리 — 진입 시 강제 전환
+        let tauntTarget  = null;
+        let maxTauntProg = -Infinity;
+        units.forEach(unit => {
+            if (!unit.active || !unit.alive) return;
+            if (unit.isInvisible) return;
+            if (!unit.taunting) return;
+            if (this.getDistance(unit) > this.range) return;
+            const prog = this.getProgress(unit);
+            if (prog > maxTauntProg) { maxTauntProg = prog; tauntTarget = unit; }
+        });
+
+        if (tauntTarget && this.currentTarget !== tauntTarget) {
+            this.currentTarget = tauntTarget;
+            this.burnTime      = 0;
+        }
+
+        // 현재 타겟 유효성 검증
+        if (this.currentTarget && (
+            !this.currentTarget.active     ||
+            !this.currentTarget.alive      ||
+            this.currentTarget.isInvisible ||
+            this.getDistance(this.currentTarget) > this.range
+        )) {
+            this.currentTarget = null;
+            this.burnTime      = 0;
+        }
+
+        // 타겟 없으면 새로 선택 (진행도 가장 높은 유닛)
+        if (!this.currentTarget) {
+            let maxProg = -Infinity;
+            units.forEach(unit => {
+                if (!unit.active || !unit.alive) return;
+                if (unit.isInvisible) return;
+                if (this.getDistance(unit) > this.range) return;
+                const prog = this.getProgress(unit);
+                if (prog > maxProg) { maxProg = prog; this.currentTarget = unit; }
+            });
+        }
+
+        if (!this.currentTarget) return;
+
+        // 공격: 누적 시간에 비례해 DPS 증가
+        this.burnTime += dt;
+        const dps = this.damage * (1 + this.burnTime);
+        this.currentTarget.takeDamage(dps * dt, units);
+
+        // 빔 이펙트: burnTime에 따라 굵어짐
+        const beamWidth = Math.min(6, 1.5 + this.burnTime * 0.4);
+        attackFlashes.push({
+            x1: this.x, y1: this.y,
+            x2: this.currentTarget.x, y2: this.currentTarget.y,
+            color: this.color, timer: 0, duration: 0.08,
+            lineWidth: beamWidth, dotRadius: 3, glow: true,
+        });
+    }
+}
+
 export class AllRoundTower extends Tower {
     static meta = {
         name: '만능 타워', rarity: 'LEGEND',
@@ -673,7 +754,7 @@ export const TOWER_CLASSES = [
     NormalTower, HeavyTower, FastTower,
     SkyTower, InfraredTower, PoisonTower,
     AreaTower, ChainTower,
-    SniperTower,
+    SniperTower, InfernoTower,
     AllRoundTower,
 ];
 export const TOWER_CLASS = Object.fromEntries(TOWER_CLASSES.map(Cls => [Cls.name, Cls]));

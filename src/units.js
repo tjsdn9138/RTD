@@ -445,6 +445,143 @@ export class InvisibleUnit extends Unit {
     }
 }
 
+export class SplitUnit extends Unit {
+    static meta = {
+        type: 'SplitUnit', name: '분열하는넘', rarity: 'HERO',
+        ico: '분', bg: '#fde8e0', fg: '#a03000',
+        hp: 700, speed: 120, level: 1,
+        hpPlus: 50, speedPlus: 10, splitPlus: 1,
+        passive: '분열', splitNum: 2,
+        passiveDesc: (num) => `사망 시 ${num}마리로 분열합니다.\n분열된 유닛은 30%의 체력과 200%의 속도를 갖습니다.`,
+    };
+
+    constructor() {
+        super();
+        this.maxHp    = SplitUnit.meta.hp;
+        this.hp       = this.maxHp;
+        this.speed    = SplitUnit.meta.speed;
+        this.color    = '#e17055';
+        this.isSplit  = false;
+        this.splitNum = SplitUnit.meta.splitNum;
+    }
+
+    takeDamage(amount, units) {
+        const actualDamage = amount * (1 - this.damageReduction / 100);
+        if (!this.isSplit && this.hp - actualDamage <= 0) {
+            this.alive  = false;
+            this.active = false;
+            game.deadCount++;
+            shatterEffects.push({
+                x: this.x, y: this.y,
+                timer: 0, duration: 0.5,
+                color: this.color,
+                shards: Array.from({ length: 8 }, (_, i) => ({
+                    angle: (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+                    speed: 28 + Math.random() * 22,
+                    size:  3 + Math.random() * 2.5,
+                })),
+            });
+            this._spawnChildren(units);
+            checkWaveEnd();
+            return;
+        }
+        super.takeDamage(amount, units);
+    }
+
+    _spawnChildren(units) {
+        const GAP = 20;
+        for (let i = 0; i < this.splitNum; i++) {
+            const child            = new SplitUnit();
+            child.isSplit          = true;
+            child.splitNum         = this.splitNum;
+            child.maxHp            = Math.floor(this.maxHp * 0.3);
+            child.hp               = child.maxHp;
+            child.speed            = this.speed * 2.0;
+            child.waypoints        = this.waypoints;
+            child.alive            = true;
+            child.active           = true;
+            child.spawned          = true;
+            child.isPoisoned       = this.isPoisoned;
+            child.poisonDps        = this.poisonDps;
+            child.poisonTimer      = this.poisonTimer;
+
+            const targetDist       = Math.max(0, this.distanceTraveled - i * GAP);
+            const pos              = SplitUnit._posAt(this.waypoints, targetDist);
+            child.x                = pos.x;
+            child.y                = pos.y;
+            child.waypointIndex    = pos.waypointIndex;
+            child.distanceTraveled = pos.dist;
+
+            units.push(child);
+        }
+    }
+
+    static _posAt(waypoints, targetDist) {
+        let cumDist = 0;
+        for (let i = 0; i < waypoints.length - 1; i++) {
+            const dx     = waypoints[i + 1].x - waypoints[i].x;
+            const dy     = waypoints[i + 1].y - waypoints[i].y;
+            const segLen = Math.sqrt(dx * dx + dy * dy);
+            if (cumDist + segLen >= targetDist) {
+                const t = (targetDist - cumDist) / segLen;
+                return { x: waypoints[i].x + dx * t, y: waypoints[i].y + dy * t, waypointIndex: i + 1, dist: targetDist };
+            }
+            cumDist += segLen;
+        }
+        return { x: waypoints[0].x, y: waypoints[0].y, waypointIndex: 1, dist: 0 };
+    }
+
+    _drawBody(ctx) {
+        if (!this.isSplit) { super._drawBody(ctx); return; }
+
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (this.isPoisoned) {
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 9, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
+            ctx.fill();
+        }
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        if (!this.isSplit) { super.draw(ctx); return; }
+
+        ctx.save();
+
+        if (this.healFlash > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 9 + 4 * (1 - this.healFlash), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(46, 204, 113, ${this.healFlash})`;
+            ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
+
+        if (this.isPoisoned) {
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 11, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(125, 186, 0, ${0.5 + 0.4 * pulse})`;
+            ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
+
+        this._drawBody(ctx);
+
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(this.x - 14, this.y - 18, 28, 4);
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(this.x - 14, this.y - 18, 28 * (this.hp / this.maxHp), 4);
+
+        ctx.restore();
+    }
+}
+
 export class EvadeUnit extends Unit {
     static meta = {
         type: 'EvadeUnit', name: '잽싼넘', rarity: 'LEGEND',
@@ -543,11 +680,13 @@ export class TimeUnit extends Unit {
     }
 }
 
+export const shatterEffects = [];
+
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
     FlyUnit, ShieldUnit, HealUnit,
     TauntUnit, BuffUnit,
-    InvisibleUnit,
+    InvisibleUnit, SplitUnit,
     EvadeUnit, TimeUnit,
 ];
 export const UNIT_CLASS = Object.fromEntries(UNIT_CLASSES.map(Cls => [Cls.name, Cls]));

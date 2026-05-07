@@ -4,6 +4,7 @@ import { initTitleScreen } from './ui/title.js';
 import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, underWeightedPick, MAX_TOWER_LEVEL } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
+import { shatterEffects } from './units.js';
 import { applyPassiveItems } from './items.js';
 
 // canvas 세팅
@@ -41,7 +42,7 @@ function initFirstTower() {
         return cov > 0 ? 1 / cov : 1;
     });
     const idx = pickWeightedIndex(weights);
-    game.towers[idx] = new TOWER_CLASS['NormalTower'](towerSlots[idx].x, towerSlots[idx].y);
+    game.towers[idx] = new TOWER_CLASS['InfernoTower'](towerSlots[idx].x, towerSlots[idx].y);
 }
 
 // 슬롯에서 경로 세그먼트 중 range 안에 들어오는 길이 계산
@@ -282,6 +283,39 @@ function updateAndDrawEffects(rawDelta) {
     }
 }
 
+// 분열 파편 이펙트 렌더링
+function updateAndDrawShatterEffects(rawDelta) {
+    for (let i = shatterEffects.length - 1; i >= 0; i--) {
+        const e = shatterEffects[i];
+        e.timer += rawDelta;
+        if (e.timer >= e.duration) { shatterEffects.splice(i, 1); continue; }
+
+        const t = e.timer / e.duration;
+
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle   = e.color;
+
+        e.shards.forEach(s => {
+            const dist = s.speed * t;
+            const sx   = e.x + Math.cos(s.angle) * dist;
+            const sy   = e.y + Math.sin(s.angle) * dist;
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(s.angle + t * Math.PI * 1.5);
+            ctx.beginPath();
+            ctx.moveTo(0, -s.size);
+            ctx.lineTo(s.size * 0.6, s.size * 0.8);
+            ctx.lineTo(-s.size * 0.6, s.size * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        });
+
+        ctx.restore();
+    }
+}
+
 // 공격 이펙트 렌더링
 function updateAndDrawAttackFlashes(rawDelta) {
     for (let i = attackFlashes.length - 1; i >= 0; i--) {
@@ -373,6 +407,7 @@ function gameLoop(timestamp) {
     prevState = game.state;
 
     game.units.forEach(u => u.draw(ctx));
+    updateAndDrawShatterEffects(rawDelta);
     updateAndDrawAttackFlashes(rawDelta);
     updateAndDrawEffects(rawDelta);
 
