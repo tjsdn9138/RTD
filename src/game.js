@@ -125,13 +125,22 @@ export function levelUpUnit(type) {
             meta.time = parseFloat((meta.time + meta.timePlus).toFixed(2));
         }
         if ('dodgeProb' in meta) {
-            meta.dodgeProb = parseFloat((meta.dodgeProb + meta.dodgePlus).toFixed(2));
+            meta.dodgeProb = parseFloat(Math.min(100, meta.dodgeProb + meta.dodgePlus).toFixed(2));
         }
         if ('heal' in meta) {
             meta.heal += meta.healPlus;
         }
         if ('decDamage' in meta) {
             meta.decDamage = meta.decDamage + meta.decPlus;
+        }
+        if ('returnPlus' in meta) {
+            meta.returnHp = Math.min(100, meta.returnHp + meta.returnPlus);
+        }
+        if ('splitPlus' in meta) {
+            meta.splitNum += meta.splitPlus;
+        }
+        if ('dashMinus' in meta) {
+            meta.dashTime = Math.max(0.1, parseFloat((meta.dashTime - meta.dashMinus).toFixed(2)));
         }
     }
 
@@ -174,27 +183,30 @@ export function weightedPick(classes) {
     return null;
 }
 
-// 임의의 희귀도 내에서의 랜덤 픽
-export function underWeightedPick(rarityNum) {
-    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
-    rarityNum = Math.min(rarityNum, rarities.length - 1);
-    let total = 0;
-    for (let i = 0; i <= rarityNum; i++) {
-        total += RARITY[rarities[i]].prob;
-    }
+// 지정 등급의 타워 중 중복 제외 랜덤 타워 선택
+// rarities[5]='UNDEFINED'는 만능 타워(특수 milestone, 예: wave 50) 전용 풀
+export function selectTower(rarityNum) {
+    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND', 'UNDEFINED'];
+    if (rarityNum < 0 || rarityNum >= rarities.length) return null;
+    const existing = new Set(game.towers.filter(t => t).map(t => t.constructor.name));
+    const candidates = TOWER_CLASSES.filter(t =>
+        t.meta.rarity === rarities[rarityNum] && !existing.has(t.name)
+    );
 
-    const roll = Math.random() * total;
-    let cumulative = 0;
-    for (let i = 0; i <= rarityNum; i++) {
-        cumulative += RARITY[rarities[i]].prob;
-        if (roll < cumulative) return selectTower(rarities[i]);
-    }
-    return selectTower(rarities[rarityNum]);
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)].name;
 }
 
-// 희귀도에 맞는 타워 중 랜덤 선택
-export function selectTower(rarity) {
-    const selected = TOWER_CLASSES.filter(tower => tower.meta.rarity === rarity);
-    if (selected.length === 0) return null;
-    return selected[Math.floor(Math.random() * selected.length)].name;
+// rarityNum(0=COMMON~4=LEGEND) 이하 등급의 타워 중 중복 제외 랜덤 타워 선택
+// UNDEFINED는 일반 풀에서 제외 (selectTower의 milestone에서만 등장)
+export function selectRandomTower(rarityNum) {
+    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
+    if (rarityNum < 0 || rarityNum >= rarities.length) return null;
+    const existing = new Set(game.towers.filter(t => t).map(t => t.constructor.name));
+    const candidates = TOWER_CLASSES.filter(t => {
+        const idx = rarities.indexOf(t.meta.rarity);
+        return idx >= 0 && idx <= rarityNum && !existing.has(t.name);
+    });
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)].name;
 }

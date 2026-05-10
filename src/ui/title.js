@@ -1,4 +1,5 @@
 import { hasSaveData, getSaveSummary } from '../save.js';
+import { MAX_WAVES } from '../state.js';
 
 function initStars() {
     const canvas = document.getElementById('title-stars');
@@ -146,7 +147,7 @@ export function initTitleScreen(onNewGame, onContinue) {
     const summary = getSaveSummary();
     if (summary && saveInfo) {
         saveInfo.innerHTML =
-            `WAVE <span>${summary.wave}</span> / 40` +
+            `WAVE <span>${summary.wave}</span> / ${MAX_WAVES}` +
             `&nbsp;&nbsp;❤ <span>${summary.lives}</span>` +
             `&nbsp;&nbsp;<span>${summary.gold.toLocaleString()}</span>G`;
         saveInfo.style.display = 'block';

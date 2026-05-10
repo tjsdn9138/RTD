@@ -565,7 +565,7 @@ body {
 
 .owned-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 5px;
   margin-top: 8px;
 }
@@ -694,7 +694,7 @@ body {
 
 .passive-tag {
   font-family: 'NeoDunggeunmo', monospace;
-  font-size: 11px;
+  font-size: 10px;
   padding: 7px 10px;
   background: #0a2aaa;
   color: #c0d0ff;
@@ -1072,6 +1072,20 @@ body {
 .ulist-next-val {
     color: #2a8a00;
     font-size: 11px;
+}
+
+.tower-buff-val {
+    color: #c8960a;
+    font-size: 11px;
+}
+
+.stat-fill-buff {
+    height: 12px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #f5c84299;
+    pointer-events: none;
 }
 
 /* 레벨업 후 스탯 바 미리보기 */

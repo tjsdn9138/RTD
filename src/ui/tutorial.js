@@ -83,7 +83,7 @@ export function openTutorial() {
     const closeBtn = document.createElement('button');
     closeBtn.id = 'tutorial-close';
     closeBtn.textContent = '✕';
-    closeBtn.addEventListener('click', () => overlay.remove());
+    closeBtn.addEventListener('click', () => close());
 
     header.appendChild(titleEl);
     header.appendChild(closeBtn);
@@ -132,8 +132,27 @@ export function openTutorial() {
     document.body.appendChild(overlay);
 
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.remove();
+        if (e.target === overlay) close();
     });
+
+    // ESC 닫기 / Space 다음 챕터 — capture로 등록해 ui.js의 전역 단축키보다 먼저 잡음
+    function onKey(e) {
+        if (e.code === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+        } else if (e.code === 'Space') {
+            e.preventDefault();
+            e.stopPropagation();
+            goTo(currentChapter + 1);
+        }
+    }
+    document.addEventListener('keydown', onKey, true);
+
+    function close() {
+        document.removeEventListener('keydown', onKey, true);
+        overlay.remove();
+    }
 
     function goTo(idx) {
         if (idx < 0 || idx >= CHAPTERS.length) return;

@@ -1,7 +1,7 @@
 import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel } from './ui/ui.js';
-import { loadGame, deleteSave } from './save.js';
+import { loadGame, deleteSave, saveGame } from './save.js';
 import { initTitleScreen } from './ui/title.js';
-import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, underWeightedPick, MAX_TOWER_LEVEL } from './game.js';
+import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
 import { shatterEffects } from './units.js';
@@ -39,7 +39,7 @@ function initFirstTower() {
     const towerRange = new TOWER_CLASS['NormalTower'](0, 0).range;
     const weights = towerSlots.map(slot => {
         const cov = getSlotPathCoverage(slot, waypoints, towerRange);
-        return cov > 0 ? 1 / cov : 1;
+        return cov > 0 ? 1 / cov : 0;
     });
     const idx = pickWeightedIndex(weights);
     game.towers[idx] = new TOWER_CLASS['NormalTower'](towerSlots[idx].x, towerSlots[idx].y);
@@ -171,17 +171,16 @@ document.addEventListener('nextwavestart', () => {
             // 타워 먼저 선택
             let selectedTower;
             if (game.waveNumber % 10 === 0) {
-                const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
-                selectedTower = selectTower(rarities[Math.floor(game.waveNumber / 10)]);
+                selectedTower = selectTower(Math.floor(game.waveNumber / 10));
             } else {
-                selectedTower = underWeightedPick(Math.floor(game.waveNumber / 10));
+                selectedTower = selectRandomTower(Math.floor(game.waveNumber / 10));
             }
             if (selectedTower) {
                 // 해당 타워의 실제 사거리로 슬롯별 커버 경로 계산 후 반비례 가중치로 슬롯 선택
                 const towerRange = new TOWER_CLASS[selectedTower](0, 0).range;
                 const weights = emptyIdxList.map(i => {
                     const cov = getSlotPathCoverage(towerSlots[i], waypoints, towerRange);
-                    return cov > 0 ? 1 / cov : 1;
+                    return cov > 0 ? 1 / cov : 0;
                 });
                 const emptyIdx = emptyIdxList[pickWeightedIndex(weights)];
 
@@ -193,7 +192,7 @@ document.addEventListener('nextwavestart', () => {
                 for (let i = 1; i < minTowerLevel; i++) levelUpTower(game.towers[emptyIdx]);
             }
         }
-    } 
+    }
     else {
         const existList = game.towers.filter(t => t && t.level < MAX_TOWER_LEVEL);
         if (existList.length > 0) {
@@ -202,6 +201,7 @@ document.addEventListener('nextwavestart', () => {
             addLevelUpEffect(tower.x, tower.y);
         }
     }
+    saveGame();
 });
 
 // 타워 정지 아이템 — 전투 중 타워 클릭
@@ -232,6 +232,7 @@ canvas.addEventListener('click', (e) => {
     game.pendingItem = null;
     document.querySelector('.bag-card.selected')?.classList.remove('selected');
     refreshBagPanel();
+    if (used) saveGame();
 });
 
 // 레벨업 이펙트
@@ -373,6 +374,7 @@ function gameLoop(timestamp) {
     const rawDelta  = Math.min((timestamp - lastTime) / 1000, 0.1);
     const deltaTime = rawDelta * game.gameSpeed * 1000;
     lastTime = timestamp;
+    game.time += deltaTime;
 
     ctx.clearRect(0, 0, logicalW, logicalH);
     drawMap(ctx, logicalW, logicalH, waypoints);
@@ -417,12 +419,29 @@ function gameLoop(timestamp) {
 // 타이틀 화면 — 선택 후 게임 초기화
 function startGame(isNew) {
     resizeCanvas();
-    if (isNew) initFirstTower();
+    if (isNew) {
+        initFirstTower();
+        saveGame();
+    }
     initUI();
     requestAnimationFrame(gameLoop);
 }
 
-initTitleScreen(
-    () => { deleteSave(); startGame(true); },
-    () => { loadGame();   startGame(false); },
-);
+// "새 게임" 클릭 시 reload로 모든 클래스 메타(레벨업으로 변형된 static meta)를 초기화
+// reload 직후엔 타이틀을 건너뛰고 바로 신규 게임 시작
+const FRESH_START_KEY = 'rtd-fresh-start';
+if (sessionStorage.getItem(FRESH_START_KEY)) {
+    sessionStorage.removeItem(FRESH_START_KEY);
+    // index.html에 정적으로 박혀있는 타이틀 오버레이를 제거 (initTitleScreen 스킵하므로 직접 정리)
+    document.getElementById('title-overlay')?.remove();
+    startGame(true);
+} else {
+    initTitleScreen(
+        () => {
+            deleteSave();
+            sessionStorage.setItem(FRESH_START_KEY, '1');
+            location.reload();
+        },
+        () => { loadGame(); startGame(false); },
+    );
+}

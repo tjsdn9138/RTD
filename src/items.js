@@ -28,7 +28,7 @@ export class ActiveItem extends Item {
 export class SpeedCharm extends PassiveItem {
     static meta = {
         name: '속도부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
         desc: (mul) => `아군 전체의 속도를 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -43,7 +43,7 @@ export class SpeedCharm extends PassiveItem {
 export class HpCharm extends PassiveItem {
     static meta = {
         name: '체력부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
         desc: (mul) => `아군 전체의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -115,7 +115,7 @@ export class SpeedUnitCharm extends PassiveItem {
 export class SlowUnitCharm extends PassiveItem {
     static meta = {
         name: '느린부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
         desc: (mul) => `느린넘의 속도를 ${mul}배 상승시킵니다.`,
     };
     constructor() {
@@ -177,9 +177,73 @@ export class TutorialBook extends ActiveItem {
     }
 }
 
+export class UnitGachaTicket extends ActiveItem {
+    static meta = {
+        name: '유닛 뽑기권', kind: 'active', rarity: 'COMMON',
+        desc: '유닛 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('유닛 뽑기권');
+    }
+}
+
+export class ItemGachaTicket extends ActiveItem {
+    static meta = {
+        name: '아이템 뽑기권', kind: 'active', rarity: 'COMMON',
+        desc: '아이템 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('아이템 뽑기권');
+    }
+}
+
+export class UnitTicketHero extends ActiveItem {
+    static meta = {
+        name: '유닛 뽑기권', kind: 'active', rarity: 'HERO',
+        targetType: 'UnitGachaTicket',
+        desc: '유닛 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('유닛 뽑기권');
+    }
+}
+
+export class ItemTicketHero extends ActiveItem {
+    static meta = {
+        name: '아이템 뽑기권', kind: 'active', rarity: 'HERO',
+        targetType: 'ItemGachaTicket',
+        desc: '아이템 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('아이템 뽑기권');
+    }
+}
+
+export class UnitTicketLegend extends ActiveItem {
+    static meta = {
+        name: '유닛 뽑기권', kind: 'active', rarity: 'LEGEND',
+        targetType: 'UnitGachaTicket',
+        desc: '유닛 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('유닛 뽑기권');
+    }
+}
+
+export class ItemTicketLegend extends ActiveItem {
+    static meta = {
+        name: '아이템 뽑기권', kind: 'active', rarity: 'LEGEND',
+        targetType: 'ItemGachaTicket',
+        desc: '아이템 뽑기를 1회 할 수 있습니다.',
+    };
+    constructor() {
+        super('아이템 뽑기권');
+    }
+}
+
 export class TowerStop extends ActiveItem {
     static meta = {
-        name: '타워 정지', kind: 'active', rarity: 'HERO',
+        name: '타워 정지', kind: 'active', rarity: 'LEGEND',
         desc: '타워 하나를 한 웨이브 동안 무력화합니다.\n클릭 후 전투 중 타워를 선택하세요.',
     };
     constructor() {
@@ -190,26 +254,6 @@ export class TowerStop extends ActiveItem {
         tower.stopped = true;
         this.used = true;
         return true;
-    }
-}
-
-export class UnitGachaTicket extends ActiveItem {
-    static meta = {
-        name: '유닛 뽑기권', kind: 'active', rarity: 'LEGEND',
-        desc: '유닛 뽑기를 1회 할 수 있습니다.',
-    };
-    constructor() {
-        super('유닛 뽑기권');
-    }
-}
-
-export class ItemGachaTicket extends ActiveItem {
-    static meta = {
-        name: '아이템 뽑기권', kind: 'active', rarity: 'LEGEND',
-        desc: '아이템 뽑기를 1회 할 수 있습니다.',
-    };
-    constructor() {
-        super('아이템 뽑기권');
     }
 }
 
@@ -226,8 +270,13 @@ export const ITEM_CLASSES = [
     SpeedCharm, HpCharm, GoldCharm,
     NormalUnitCharm, SpeedUnitCharm, SlowUnitCharm,
     ShieldUnitCharm, TauntUnitCharm,
-    TowerStop,
-    UnitGachaTicket, ItemGachaTicket,
+    // HERO 패시브 아이템
+    // LEGEND 패시브 아이템
     TutorialBook,
+    UnitGachaTicket, ItemGachaTicket,
+    // UNCOMMON 액티브 아이템
+    // RARE 액티브 아이템
+    UnitTicketHero, ItemTicketHero,
+    TowerStop, UnitTicketLegend, ItemTicketLegend,
 ];
 export const ITEM_CLASS = Object.fromEntries(ITEM_CLASSES.map(Cls => [Cls.name, Cls]));

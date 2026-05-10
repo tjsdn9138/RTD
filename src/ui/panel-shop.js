@@ -2,6 +2,7 @@ import { game, inventory, ownedUnits, RARITY, getGachaCost, getGachaCostRange, w
 import { UNIT_CLASSES } from '../units.js';
 import { ITEM_CLASSES } from '../items.js';
 import { updateHUD } from './ui.js';
+import { saveGame } from '../save.js';
 
 // 상점 패널 랜더링
 export function renderShopPanel(container) {
@@ -40,7 +41,8 @@ function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
         const cost         = getGachaCost(kind);
         const count        = inventory.find(i => i.type === ticketType)?.count ?? 0;
         const ticketsToUse = Math.min(count, 10);
-        const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind] + ticketsToUse, 10 - ticketsToUse);
+        // 티켓은 gachaPulls를 증가시키지 않으므로, 시작점은 ticketsToUse 오프셋 없이 현재 gachaPulls
+        const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind], 10 - ticketsToUse);
 
         btn1.innerHTML = count > 0 ? `🎫 1 / ${count}` : `🪙 ${cost}`;
 
@@ -61,6 +63,7 @@ function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
         allUpdateBtns.forEach(u => u());
         showResults(section, [result]);
         updateHUD();
+        saveGame();
     });
 
     btn10.addEventListener('click', () => {
@@ -69,6 +72,7 @@ function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
         allUpdateBtns.forEach(u => u());
         showResults(section, results);
         updateHUD();
+        saveGame();
     });
 
     btnGroup.appendChild(btn1);
@@ -93,8 +97,8 @@ function doGacha(kind) {
         const cost = getGachaCost(kind);
         if (game.gold < cost) return null;
         game.gold -= cost;
+        game.gachaPulls[kind]++;
     }
-    game.gachaPulls[kind]++;
 
     const classes = kind === 'unit' ? UNIT_CLASSES : ITEM_CLASSES;
     const Cls = weightedPick(classes);
@@ -104,8 +108,16 @@ function doGacha(kind) {
         const owned = ownedUnits.find(u => u.type === Cls.name);
         if (owned) owned.count++;
     } else {
-        const amount = Cls.name === 'UnitGachaTicket' ? 10 : Cls.name === 'ItemGachaTicket' ? 5 : 1;
-        const inv = inventory.find(i => i.type === Cls.name);
+        const invType = Cls.meta.targetType ?? Cls.name;
+        let amount = 1;
+        if (invType === 'UnitGachaTicket') {
+            if      (Cls.meta.rarity === 'LEGEND') amount = 20;
+            else if (Cls.meta.rarity === 'HERO')   amount = 10;
+        } else if (invType === 'ItemGachaTicket') {
+            if      (Cls.meta.rarity === 'LEGEND') amount = 5;
+            else if (Cls.meta.rarity === 'HERO')   amount = 3;
+        }
+        const inv = inventory.find(i => i.type === invType);
         if (inv) { inv.count += amount; inv.owned = true; }
         if (Cls.meta.kind === 'passive') checkItemLevelUp(Cls.name);
     }
@@ -118,7 +130,7 @@ function doGacha10(kind) {
     const ticket = inventory.find(i => i.type === ticketType);
     const ticketCount  = ticket?.count ?? 0;
     const ticketsToUse = Math.min(ticketCount, 10);
-    const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind] + ticketsToUse, 10 - ticketsToUse);
+    const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind], 10 - ticketsToUse);
 
     if (game.gold < goldNeeded) return null;
 

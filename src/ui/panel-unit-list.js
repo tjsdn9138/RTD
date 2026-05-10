@@ -1,6 +1,7 @@
 import { ownedUnits, deploySlots, MAX_UNIT_LEVEL, getLevelUpCost, levelUpUnit, game, RARITY, UNIT_HP_MAX, UNIT_SPD_MAX } from '../game.js';
 import { UNIT_CLASSES } from '../units.js';
 import { updateHUD } from './ui.js';
+import { saveGame } from '../save.js';
 
 function getMeta(type) {
     return UNIT_CLASSES.find(C => C.name === type)?.meta;
@@ -8,6 +9,41 @@ function getMeta(type) {
 
 const HP_MAX  = UNIT_HP_MAX;
 const SPD_MAX = UNIT_SPD_MAX;
+
+// 5레벨마다 변하는 패시브 스탯 — 새 유닛/스탯 추가 시 여기에 등록
+// key:    meta에서 현재값을 읽을 키
+// nextId: 다음값 강조 span의 id
+// next:   현재 meta로부터 다음값 계산
+const PASSIVE_STAT_KEYS = [
+    { key: 'defense',   nextId: 'next-def',      next: m => m.defense   + m.defPlus                                                            },
+    { key: 'dodgeProb', nextId: 'next-dodge',    next: m => parseFloat((m.dodgeProb + m.dodgePlus).toFixed(2))                                  },
+    { key: 'time',      nextId: 'next-time',     next: m => parseFloat((m.time      + m.timePlus).toFixed(2))                                   },
+    { key: 'decDamage', nextId: 'next-dec',      next: m => m.decDamage + m.decPlus                                                            },
+    { key: 'heal',      nextId: 'next-heal',     next: m => m.heal      + m.healPlus                                                            },
+    { key: 'returnHp',  nextId: 'next-returnhp', next: m => Math.min(100, m.returnHp + m.returnPlus)                                            },
+    { key: 'splitNum',  nextId: 'next-splitnum', next: m => m.splitNum  + m.splitPlus                                                          },
+    { key: 'dashTime',  nextId: 'next-dashtime', next: m => Math.max(0.1, parseFloat((m.dashTime - m.dashMinus).toFixed(2)))                    },
+];
+
+const STAT_MARKER = '\x01STAT\x01';
+
+// 단일 패시브 desc 렌더 — 5레벨 분기에서 다음값 강조 span 삽입
+function renderPassiveDesc(m, isMax) {
+    const desc = m.passiveDesc;
+    if (typeof desc !== 'function') return desc ?? '';
+
+    const stat = PASSIVE_STAT_KEYS.find(s => s.key in m);
+    const cur  = stat ? m[stat.key] : 0;
+
+    const willLevelUp = stat && !isMax && (m.level + 1) % 5 === 0;
+    if (!willLevelUp) return desc(cur);
+
+    const next = stat.next(m);
+    return desc(STAT_MARKER).replace(
+        STAT_MARKER,
+        `${cur} <span class="ulist-next-val" id="${stat.nextId}">→ ${next}</span>`
+    );
+}
 
 let selectedType = null;
 
@@ -44,7 +80,7 @@ function renderGrid(grid, detail) {
             const cost       = getLevelUpCost(m.level);
             const canLevelUp = m.level < MAX_UNIT_LEVEL && owned.count >= cost.units && game.gold >= cost.gold;
             card.innerHTML = `
-                <div class="ulist-card-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+                <div class="ulist-card-ico" style="background:${m.color};"></div>
                 <div class="ulist-card-name">${m.name}</div>
                 <div class="ulist-card-lv">Lv.${m.level}</div>
                 ${canLevelUp ? '<div class="ulist-card-lvup-badge"></div>' : ''}
@@ -78,32 +114,10 @@ function renderDetail(detail, owned, grid) {
 
     const nextHp    = Math.floor(m.hp    + m.hpPlus);
     const nextSpeed = Math.floor(m.speed + m.speedPlus);
-    const nextLevel = m.level + 1;
-    const nextDef   = 'defense'   in m && nextLevel % 5 === 0
-        ? m.defense + m.defPlus
-        : null;
-    const nextDodge = 'dodgeProb' in m && !isMax && nextLevel % 5 === 0
-        ? parseFloat((m.dodgeProb + m.dodgePlus).toFixed(2))
-        : null;
-    const nextTime  = 'timePlus'  in m && nextLevel % 5 === 0
-        ? parseFloat((m.time + m.timePlus).toFixed(2))
-        : null;
-    const nextDec   = 'decDamage' in m && nextLevel % 5 === 0
-        ? m.decDamage + m.decPlus
-        : null;
-    const nextHeal     = 'heal'     in m && nextLevel % 5 === 0
-        ? m.heal + m.healPlus
-        : null;
-    const nextReturnHp = 'returnHp'  in m && !isMax && nextLevel % 5 === 0
-        ? m.returnHp + m.returnPlus
-        : null;
-    const nextSplitNum = 'splitNum'  in m && !isMax && nextLevel % 5 === 0
-        ? m.splitNum + m.splitPlus
-        : null;
 
     detail.innerHTML = `
         <div class="ulist-detail-header">
-            <div class="ulist-detail-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+            <div class="ulist-detail-ico" style="background:${m.color};"></div>
             <div>
                 <div class="ulist-detail-name">${owned.name}</div>
                 <div class="ulist-detail-lv" style="color:${RARITY[m.rarity]?.color ?? '#4a4a4a'};">
@@ -129,49 +143,19 @@ function renderDetail(detail, owned, grid) {
                 </div>
                 <div class="ulist-stat-val">${m.speed}${!isMax ? ` <span class="ulist-next-val">→ ${nextSpeed}</span>` : ''}</div>
             </div>
-            ${m.passive ? `
-            <div class="ulist-passive-wrap">
-                <div class="passive-tag">${m.passive}</div>
-                <div class="ulist-passive-desc">${typeof m.passiveDesc === 'function'
-                        ? nextDef !== null
-                            ? m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? 0).replace(
-                                String(m.defense),
-                                `${m.defense} <span class="ulist-next-val" id="next-def">→ ${nextDef}</span>`
-                            )
-                            : nextDodge !== null
-                                ? m.passiveDesc(m.dodgeProb).replace(
-                                    String(m.dodgeProb),
-                                    `${m.dodgeProb} <span class="ulist-next-val" id="next-dodge">→ ${nextDodge}</span>`
-                                  )
-                                : nextTime !== null
-                                    ? m.passiveDesc(m.time).replace(
-                                        String(m.time),
-                                        `${m.time} <span class="ulist-next-val" id="next-time">→ ${nextTime}</span>`
-                                      )
-                                    : nextDec !== null
-                                        ? m.passiveDesc(m.decDamage).replace(
-                                            String(m.decDamage),
-                                            `${m.decDamage} <span class="ulist-next-val" id="next-dec">→ ${nextDec}</span>`
-                                          )
-                                        : nextHeal !== null
-                                            ? m.passiveDesc(m.heal).replace(
-                                                String(m.heal),
-                                                `${m.heal} <span class="ulist-next-val" id="next-heal">→ ${nextHeal}</span>`
-                                              )
-                                            : nextReturnHp !== null
-                                                ? m.passiveDesc(m.returnHp).replace(
-                                                    String(m.returnHp),
-                                                    `${m.returnHp} <span class="ulist-next-val" id="next-returnhp">→ ${nextReturnHp}</span>`
-                                                  )
-                                                : nextSplitNum !== null
-                                                    ? m.passiveDesc(m.splitNum).replace(
-                                                        String(m.splitNum),
-                                                        `${m.splitNum} <span class="ulist-next-val" id="next-splitnum">→ ${nextSplitNum}</span>`
-                                                      )
-                                                    : m.passiveDesc(m.defense ?? m.time ?? m.dodgeProb ?? m.decDamage ?? m.heal ?? m.returnHp ?? m.splitNum ?? 0)
-                        : (m.passiveDesc ?? '')
-                }</div>
-            </div>` : ''}
+            ${m.passive ? (Array.isArray(m.passive)
+                ? m.passive.map((p, i) => {
+                    const d = Array.isArray(m.passiveDesc) ? m.passiveDesc[i] : m.passiveDesc;
+                    const resolved = typeof d === 'function' ? d(0) : (d ?? '');
+                    return `<div class="ulist-passive-wrap">
+                        <div class="passive-tag">${p}</div>
+                        <div class="ulist-passive-desc">${resolved}</div>
+                    </div>`;
+                }).join('')
+                : `<div class="ulist-passive-wrap">
+                    <div class="passive-tag">${m.passive}</div>
+                    <div class="ulist-passive-desc">${renderPassiveDesc(m, isMax)}</div>
+                </div>`) : ''}
         </div>
 
         ${!isMax ? `
@@ -212,6 +196,7 @@ function renderDetail(detail, owned, grid) {
             updateHUD();
             renderGrid(grid, detail);
             renderDetail(detail, owned, grid);
+            saveGame();
         }
     });
 }

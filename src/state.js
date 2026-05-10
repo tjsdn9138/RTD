@@ -21,6 +21,7 @@ export const game = {
     units: [], // 출전 유닛
     towers: [], // 현재 타워
     gameSpeed: 1, // 게임 배속 (1 ~ 3)
+    time: 0, // 게임 진행 시간(ms, gameSpeed 반영) — 시각 펄스 등에 사용
     waveResult: null, // 'CLEAR' | 'FAIL' | null
     pendingItem: null, // 사용 대기 중인 소비 아이템 type
     goldBonus: 0,
@@ -30,8 +31,8 @@ export const game = {
 
 export const MAX_SLOTS       = 10; // 유닛 최대 개수
 export const MAX_UNIT_LEVEL  = 20; // 유닛 최대 레벨
-export const MAX_TOWER_LEVEL = 20; // 타워 최대 레벨
-export const MAX_WAVES       = 40; // 총 웨이브 수
+export const MAX_TOWER_LEVEL = 15; // 타워 최대 레벨
+export const MAX_WAVES       = 50; // 총 웨이브 수
 
 // 유닛 슬롯 추가 가격 계산
 // TODO: 수치 조정
@@ -81,7 +82,9 @@ export function startWave() {
         unit.alive  = true;
     });
     game.towers.forEach(tower => {
-        if (tower) tower.attackTimer = 1 / tower.attackSpeed;
+        if (!tower) return;
+        // attackSpeed=0 타워(InfernoTower, BuffTower)는 자체 update가 attackTimer 미사용 → Infinity 회피
+        tower.attackTimer = tower.attackSpeed > 0 ? 1 / tower.attackSpeed : 0;
     });
 }
 

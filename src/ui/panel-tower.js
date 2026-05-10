@@ -1,5 +1,5 @@
 import { game, RARITY, TOWER_DMG_MAX, TOWER_SPD_MAX, TOWER_RNG_MAX } from '../game.js';
-import { TOWER_CLASSES } from '../towers.js';
+import { TOWER_CLASSES, BuffTower } from '../towers.js';
 
 const DMG_MAX = TOWER_DMG_MAX;
 const SPD_MAX = TOWER_SPD_MAX;
@@ -66,6 +66,10 @@ function renderDetail(detail, tower, grid) {
     const meta   = tower.constructor.meta;
     const rarity = RARITY[meta.rarity];
 
+    // 다른 BuffTower가 활성 중이면 표시용 버프 데미지 계산 (BuffTower 자기 자신은 버프 X)
+    const buffActive   = !(tower instanceof BuffTower) && game.towers.some(t => t instanceof BuffTower && t !== tower && !t.stopped);
+    const buffedDamage = buffActive ? Math.floor(tower.damage * BuffTower.meta.multiplier) : null;
+
     detail.innerHTML = `
         <div class="ulist-detail-header">
             <div class="tower-detail-ico" style="background:${tower.color};"></div>
@@ -81,9 +85,15 @@ function renderDetail(detail, tower, grid) {
             <div class="ulist-stat-row">
                 <div class="stat-lbl">DMG</div>
                 <div class="stat-bg">
-                    <div class="stat-fill" style="background:#aa1800;width:${Math.min(tower.damage / DMG_MAX * 100, 100)}%"></div>
+                    ${buffActive
+                        ? `<div class="stat-fill" style="background:#aa1800;width:${Math.min(tower.damage / DMG_MAX * 100, 100)}%"></div>
+                           <div class="stat-fill-buff" style="left:${Math.min(tower.damage / DMG_MAX * 100, 100)}%;width:${Math.min((buffedDamage - tower.damage) / DMG_MAX * 100, 100)}%"></div>`
+                        : `<div class="stat-fill" style="background:#aa1800;width:${Math.min(tower.damage / DMG_MAX * 100, 100)}%"></div>`
+                    }
                 </div>
-                <div class="ulist-stat-val">${tower.damage}</div>
+                <div class="ulist-stat-val">${buffActive
+                    ? `${tower.damage} <span class="tower-buff-val">→ ${buffedDamage}</span>`
+                    : tower.damage}</div>
             </div>
             <div class="ulist-stat-row">
                 <div class="stat-lbl">SPD</div>

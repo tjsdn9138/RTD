@@ -1,6 +1,7 @@
 import { STATE, game, getSlotCost, buySlot, ownedUnits, deploySlots, MAX_SLOTS, UNIT_HP_MAX, UNIT_SPD_MAX } from '../game.js';
 import { UNIT_CLASSES } from '../units.js';
 import { updateHUD } from './ui.js';
+import { saveGame } from '../save.js';
 
 function getMeta(type) {
     return UNIT_CLASSES.find(C => C.name === type)?.meta;
@@ -31,7 +32,7 @@ function showPreview(owned, m, anchor) {
     const tip = getTooltip();
     tip.innerHTML = `
         <div class="tooltip-header">
-            <div class="preview-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+            <div class="preview-ico" style="background:${m.color};"></div>
             <div class="preview-name">${owned.name}</div>
         </div>
         <div class="stat-row">
@@ -100,7 +101,7 @@ function renderDeploySlots() {
       if (!unit.spawned) {
         div.classList.add('spawn-ready');
         div.innerHTML = `
-          <div class="slot-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+          <div class="slot-ico" style="background:${m.color};"></div>
           <div class="slot-name">${m.name}</div>
           <div class="slot-spawn-btn">▶ 출전</div>
         `;
@@ -113,7 +114,7 @@ function renderDeploySlots() {
       } else {
         div.classList.add('spawn-sent');
         div.innerHTML = `
-          <div class="slot-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+          <div class="slot-ico" style="background:${m.color};"></div>
           <div class="slot-name">${m.name}</div>
           <div class="slot-sent-label">출전됨</div>
         `;
@@ -140,7 +141,7 @@ function renderDeploySlots() {
       const cost = getSlotCost();
       div.innerHTML = `<div class="slot-lock">LOCK</div><div class="slot-cost">${cost}G</div>`;
       div.addEventListener('click', () => {
-        if (buySlot()) { renderDeploySlots(); updateHUD(); }
+        if (buySlot()) { renderDeploySlots(); updateHUD(); saveGame(); }
       });
     }
     else if (deploySlots[i]) {
@@ -148,7 +149,7 @@ function renderDeploySlots() {
       const m = getMeta(u.type);
       div.classList.add('filled');
       div.innerHTML = `
-        <div class="slot-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+        <div class="slot-ico" style="background:${m.color};"></div>
         <div class="slot-name">${u.name}</div>
         <div class="remove-hint">클릭해서 제거</div>
       `;
@@ -163,6 +164,7 @@ function renderDeploySlots() {
         renderDeploySlots();
         renderOwnedUnits();
         updateHUD();
+        saveGame();
       });
       div.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', i);
@@ -186,6 +188,7 @@ function renderDeploySlots() {
         [deploySlots[from], deploySlots[i]] = [deploySlots[i], deploySlots[from]];
         compactSlots();
         renderDeploySlots();
+        saveGame();
       });
     }
 
@@ -212,7 +215,7 @@ function renderOwnedUnits() {
       const div = document.createElement('div');
       div.className = 'owned-card';
       div.innerHTML = `
-        <div class="owned-ico" style="background:${m.bg};color:${m.fg};">${m.ico}</div>
+        <div class="owned-ico" style="background:${m.color};"></div>
         <div class="owned-name">${owned.name}</div>
         <div class="owned-count">보유 <span>${owned.count}</span></div>
       `;
@@ -225,6 +228,7 @@ function renderOwnedUnits() {
           renderDeploySlots();
           renderOwnedUnits();
           updateHUD();
+          saveGame();
         });
       }
       div.addEventListener('mouseenter', () => showPreview(owned, m, div));

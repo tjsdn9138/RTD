@@ -1,6 +1,7 @@
 import { inventory, game, getLevelUpCost, RARITY } from '../game.js';
 import { ITEM_CLASS } from '../items.js';
 import { openTutorial } from './tutorial.js';
+import { saveGame } from '../save.js';
 
 // 가방 패널 랜더링
 export function renderBagPanel(container) {
@@ -86,6 +87,7 @@ function makeCard(itemData) {
         card.addEventListener('click', () => {
             itemData.enabled = !itemData.enabled;
             card.classList.toggle('off', !itemData.enabled);
+            saveGame();
         });
     } else {
         const count = document.createElement('div');

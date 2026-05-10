@@ -33,8 +33,13 @@ export function saveGame() {
             const m = Cls.meta;
             const e = { type: Cls.name, level: m.level, hp: m.hp, speed: m.speed };
             if ('defense'   in m) e.defense   = m.defense;
-            if ('time'      in m) e.time       = m.time;
-            if ('dodgeProb' in m) e.dodgeProb  = m.dodgeProb;
+            if ('time'      in m) e.time      = m.time;
+            if ('dodgeProb' in m) e.dodgeProb = m.dodgeProb;
+            if ('heal'      in m) e.heal      = m.heal;
+            if ('decDamage' in m) e.decDamage = m.decDamage;
+            if ('returnHp'  in m) e.returnHp  = m.returnHp;
+            if ('splitNum'  in m) e.splitNum  = m.splitNum;
+            if ('dashTime'  in m) e.dashTime  = m.dashTime;
             return e;
         }),
 
@@ -99,8 +104,13 @@ export function loadGame() {
             m.hp    = saved.hp;
             m.speed = saved.speed;
             if ('defense'   in saved) m.defense   = saved.defense;
-            if ('time'      in saved) m.time       = saved.time;
-            if ('dodgeProb' in saved) m.dodgeProb  = saved.dodgeProb;
+            if ('time'      in saved) m.time      = saved.time;
+            if ('dodgeProb' in saved) m.dodgeProb = saved.dodgeProb;
+            if ('heal'      in saved) m.heal      = saved.heal;
+            if ('decDamage' in saved) m.decDamage = saved.decDamage;
+            if ('returnHp'  in saved) m.returnHp  = saved.returnHp;
+            if ('splitNum'  in saved) m.splitNum  = saved.splitNum;
+            if ('dashTime'  in saved) m.dashTime  = saved.dashTime;
         });
 
         // 보유 유닛 개수 복원

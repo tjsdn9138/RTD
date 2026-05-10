@@ -1,19 +1,20 @@
 import { STATE, game, startWave, nextWave, retryWave, loseLife, gameWin, deploySlots, ownedUnits, getLevelUpCost, MAX_UNIT_LEVEL, MAX_WAVES } from '../game.js';
 import { saveGame, deleteSave } from '../save.js';
 import { UNIT_CLASS, UNIT_CLASSES } from '../units.js';
-import { renderUnitPanel, refreshUnitPanel as refreshUnitPanelInner } from './panel-unit.js';
+import { renderUnitPanel, refreshUnitPanel } from './panel-unit.js';
 import { renderUnitListPanel } from './panel-unit-list.js';
 import { renderTowerPanel } from './panel-tower.js';
 import { renderBagPanel }  from './panel-bag.js';
 import { renderShopPanel } from './panel-shop.js';
 
 
-const elWaveNum  = document.getElementById('wave-number');
-const elPhaseTag = document.getElementById('phase-tag');
-const elGoldAmt  = document.getElementById('gold-amount');
-const elLifeAmt  = document.getElementById('life-amount');
-const elBtnStart = document.getElementById('btn-start');
-const elBtnSpeed = document.getElementById('btn-speed');
+const elWaveNum   = document.getElementById('wave-number');
+const elWaveTotal = document.getElementById('wave-total');
+const elPhaseTag  = document.getElementById('phase-tag');
+const elGoldAmt   = document.getElementById('gold-amount');
+const elLifeAmt   = document.getElementById('life-amount');
+const elBtnStart  = document.getElementById('btn-start');
+const elBtnSpeed  = document.getElementById('btn-speed');
 
 const SPEEDS = [1, 2, 3];
 elBtnSpeed.addEventListener('click', () => {
@@ -68,9 +69,10 @@ navBtns.forEach(btn => {
 });
 
 export function updateHUD() {
-  elWaveNum.textContent = game.waveNumber;
-  elGoldAmt.textContent = game.gold;
-  elLifeAmt.textContent = game.lives ?? 3;
+  elWaveNum.textContent   = game.waveNumber;
+  elWaveTotal.textContent = `/ ${MAX_WAVES}`;
+  elGoldAmt.textContent   = game.gold;
+  elLifeAmt.textContent   = game.lives ?? 3;
 
   const dot = document.getElementById('unit-lvup-dot');
   if (dot) {
@@ -164,12 +166,11 @@ elBtnStart.addEventListener('click', () => {
         gameWin();
         deleteSave();
         updateHUD();
-        refreshUnitPanelInner();
+        refreshUnitPanel();
         return;
       }
       const prevGold = game.gold;
       nextWave();
-      saveGame();
       document.querySelector('.bag-card.selected')?.classList.remove('selected');
       refreshBagPanel();
       const goldDiff = game.gold - prevGold;
@@ -177,8 +178,9 @@ elBtnStart.addEventListener('click', () => {
         flashHUD(elGoldAmt, '#f59e0b');
         floatHUD(elGoldAmt, `+${goldDiff}G`, '#f59e0b');
       }
+      // nextwavestart 핸들러가 타워 추가/레벨업까지 마친 뒤에 저장
       elBtnStart.dispatchEvent(new CustomEvent('nextwavestart', { bubbles: true }));
-      refreshUnitPanelInner();
+      refreshUnitPanel();
     } else {
       const prevLives = game.lives;
       const prevGold  = game.gold;
@@ -201,25 +203,25 @@ elBtnStart.addEventListener('click', () => {
         retryWave();
         document.querySelector('.bag-card.selected')?.classList.remove('selected');
         refreshBagPanel();
+        saveGame();
       }
     }
     updateHUD();
-    refreshUnitPanelInner();
+    refreshUnitPanel();
   }
 });
 
 function showGameOver(waveNumber) {
-  document.getElementById('gameover-wave-num').textContent = waveNumber;
-  document.getElementById('gameover-overlay').style.display = 'flex';
+  document.getElementById('gameover-wave-num').textContent   = waveNumber;
+  document.getElementById('gameover-wave-total').textContent = MAX_WAVES;
+  document.getElementById('gameover-overlay').style.display  = 'flex';
 }
 
 document.getElementById('btn-restart').addEventListener('click', () => {
   location.reload();
 });
 
-export function refreshUnitPanel() {
-  refreshUnitPanelInner();
-}
+export { refreshUnitPanel };
 
 export function refreshBagPanel() {
   if (panels.bag?.classList.contains('active')) renderBagPanel(panels.bag);
@@ -255,7 +257,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'KeyA' && game.state === STATE.BATTLE) {
     game.autoSpawn = !game.autoSpawn;
     game.spawnTimer = 0;
-    refreshUnitPanelInner();
+    refreshUnitPanel();
     return;
   }
 
@@ -267,5 +269,5 @@ document.addEventListener('keydown', e => {
   if (!unit || unit.spawned) return;
   e.preventDefault();
   document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));
-  refreshUnitPanelInner();
+  refreshUnitPanel();
 });

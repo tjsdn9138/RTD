@@ -1,5 +1,11 @@
 import { game, checkWaveEnd } from './state.js';
 
+// 16진수 hex → rgba 문자열 (이펙트가 unit color와 자동 동기화되도록)
+function hexToRgba(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 export class Unit {
     constructor() {
         this.maxHp = 100;
@@ -108,7 +114,7 @@ export class Unit {
 
         // 독 상태 외곽 글로우
         if (this.isPoisoned) {
-            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 200);
             ctx.beginPath();
             ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(125, 186, 0, ${0.5 + 0.4 * pulse})`;
@@ -132,7 +138,7 @@ export class Unit {
         ctx.fill();
 
         if (this.isPoisoned) {
-            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 200);
             ctx.beginPath();
             ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
@@ -144,7 +150,7 @@ export class Unit {
 export class NormalUnit extends Unit {
     static meta = {
         type: 'NormalUnit', name: '평범한넘', rarity: 'COMMON',
-        ico: '평', bg: '#c8d8f0', fg: '#0a2aaa',
+        color: '#3498db',
         hp: 500, speed: 200, level: 1,
         hpPlus: 50, speedPlus: 10,
         passive: null, passiveDesc: null,
@@ -154,16 +160,16 @@ export class NormalUnit extends Unit {
         this.maxHp = NormalUnit.meta.hp;
         this.hp    = this.maxHp;
         this.speed = NormalUnit.meta.speed;
-        this.color = '#3498db';
+        this.color = NormalUnit.meta.color;
     }
 }
 
 export class FastUnit extends Unit {
     static meta = {
         type: 'FastUnit', name: '빠른넘', rarity: 'COMMON',
-        ico: '빠', bg: '#c0e8c0', fg: '#2a8a00',
-        hp: 330, speed: 300, level: 1,
-        hpPlus: 33, speedPlus: 15,
+        color: '#f4d03f',
+        hp: 350, speed: 300, level: 1,
+        hpPlus: 35, speedPlus: 15,
         passive: null, passiveDesc: null,
     };
     constructor() {
@@ -171,14 +177,14 @@ export class FastUnit extends Unit {
         this.maxHp = FastUnit.meta.hp;
         this.hp    = this.maxHp;
         this.speed = FastUnit.meta.speed;
-        this.color = '#2ecc71';
+        this.color = FastUnit.meta.color;
     }
 }
 
 export class SlowUnit extends Unit {
     static meta = {
         type: 'SlowUnit', name: '느린넘', rarity: 'COMMON',
-        ico: '느', bg: '#f0d8c0', fg: '#aa1800',
+        color: '#795548',
         hp: 800, speed: 130, level: 1,
         hpPlus: 80, speedPlus: 8,
         passive: null, passiveDesc: null,
@@ -188,14 +194,14 @@ export class SlowUnit extends Unit {
         this.maxHp = SlowUnit.meta.hp;
         this.hp    = this.maxHp;
         this.speed = SlowUnit.meta.speed;
-        this.color = '#9b59b6';
+        this.color = SlowUnit.meta.color;
     }
 }
 
 export class FlyUnit extends Unit {
     static meta = {
         type: 'FlyUnit', name: '날라댕기는넘', rarity: 'UNCOMMON',
-        ico: '날', bg: '#d0eaf8', fg: '#1a5f8a',
+        color: '#5dade2',
         hp: 300, speed: 180, level: 1,
         hpPlus: 35, speedPlus: 10,
         passive: '비행',
@@ -206,7 +212,7 @@ export class FlyUnit extends Unit {
         this.maxHp    = FlyUnit.meta.hp;
         this.hp       = this.maxHp;
         this.speed    = FlyUnit.meta.speed;
-        this.color    = '#5dade2';
+        this.color    = FlyUnit.meta.color;
         this.isFlying = true;
     }
 }
@@ -214,7 +220,7 @@ export class FlyUnit extends Unit {
 export class ShieldUnit extends Unit {
     static meta = {
         type: 'ShieldUnit', name: '방패든넘', rarity: 'UNCOMMON',
-        ico: '방', bg: '#f0e8c0', fg: '#c87800',
+        color: '#7f8c8d',
         hp: 600, speed: 150, level: 1,
         hpPlus: 70, speedPlus: 10, defPlus: 10,
         passive: '방어', defense: 10,
@@ -226,7 +232,7 @@ export class ShieldUnit extends Unit {
         this.hp      = this.maxHp;
         this.speed   = ShieldUnit.meta.speed;
         this.defense = ShieldUnit.meta.defense;
-        this.color   = '#f39c12';
+        this.color   = ShieldUnit.meta.color;
     }
     takeDamage(amount, units) {
         const reduced = Math.max(0, amount - this.defense);
@@ -237,7 +243,7 @@ export class ShieldUnit extends Unit {
 export class HealUnit extends Unit {
     static meta = {
         type: 'HealUnit', name: '힐주는넘', rarity: 'UNCOMMON',
-        ico: '힐', bg: '#f8d0e8', fg: '#8a0050',
+        color: '#2ecc71',
         hp: 300, speed: 200, level: 1,
         hpPlus: 35, speedPlus: 10, healPlus: 30,
         passive: '힐', heal: 50,
@@ -253,7 +259,7 @@ export class HealUnit extends Unit {
         this.hp         = this.maxHp;
         this.speed      = HealUnit.meta.speed;
         this.heal       = HealUnit.meta.heal;
-        this.color      = '#e91e8c';
+        this.color      = HealUnit.meta.color;
         this.healTimer  = 0;
     }
 
@@ -295,13 +301,13 @@ export class HealUnit extends Unit {
         if (!this.active) return;
         ctx.save();
 
-        // 힐 범위 원
+        // 힐 범위 원 (unit color와 동기화)
         ctx.beginPath();
         ctx.arc(this.x, this.y, HealUnit.HEAL_RANGE, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(46, 204, 113, 0.4)';
+        ctx.strokeStyle = hexToRgba(this.color, 0.4);
         ctx.lineWidth   = 1.5;
         ctx.stroke();
-        ctx.fillStyle   = 'rgba(46, 204, 113, 0.05)';
+        ctx.fillStyle   = hexToRgba(this.color, 0.05);
         ctx.fill();
 
         ctx.restore();
@@ -312,18 +318,18 @@ export class HealUnit extends Unit {
 export class TauntUnit extends Unit {
     static meta = {
         type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
-        ico: '어', bg: '#f0c8c8', fg: '#aa1800',
+        color: '#e74c3c',
         hp: 1100, speed: 100, level: 1,
-        hpPlus: 120, speedPlus: 7,
+        hpPlus: 120, speedPlus: 10,
         passive: '도발',
         passiveDesc: '모든 타워가 이 유닛을 우선 공격합니다.',
     };
     constructor() {
         super();
-        this.maxHp   = TauntUnit.meta.hp;
-        this.hp      = this.maxHp;
-        this.speed   = TauntUnit.meta.speed;
-        this.color   = '#e74c3c';
+        this.maxHp    = TauntUnit.meta.hp;
+        this.hp       = this.maxHp;
+        this.speed    = TauntUnit.meta.speed;
+        this.color    = TauntUnit.meta.color;
         this.taunting = true;
     }
 }
@@ -331,7 +337,7 @@ export class TauntUnit extends Unit {
 export class BuffUnit extends Unit {
     static meta = {
         type: 'BuffUnit', name: '버프주는넘', rarity: 'RARE',
-        ico: '버', bg: '#fff8d0', fg: '#7a5a00',
+        color: '#e91e8c',
         hp: 400, speed: 200, level: 1,
         hpPlus: 45, speedPlus: 10, decPlus: 5,
         passive: '버프', decDamage: 5,
@@ -345,7 +351,7 @@ export class BuffUnit extends Unit {
         this.maxHp    = BuffUnit.meta.hp;
         this.hp       = this.maxHp;
         this.speed    = BuffUnit.meta.speed;
-        this.color    = '#f1c40f';
+        this.color    = BuffUnit.meta.color;
         this.decDamage = BuffUnit.meta.decDamage;
         this._buffed  = new Set();
     }
@@ -383,13 +389,13 @@ export class BuffUnit extends Unit {
         if (!this.active) return;
         ctx.save();
 
-        // 버프 범위 원 (핑크)
+        // 버프 범위 원 (unit color와 동기화)
         ctx.beginPath();
         ctx.arc(this.x, this.y, BuffUnit.BUFF_RANGE, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(233, 30, 140, 0.35)';
+        ctx.strokeStyle = hexToRgba(this.color, 0.35);
         ctx.lineWidth   = 1.5;
         ctx.stroke();
-        ctx.fillStyle   = 'rgba(233, 30, 140, 0.05)';
+        ctx.fillStyle   = hexToRgba(this.color, 0.05);
         ctx.fill();
 
         ctx.restore();
@@ -397,10 +403,103 @@ export class BuffUnit extends Unit {
     }
 }
 
+export class DietUnit extends Unit {
+    static meta = {
+        type: 'DietUnit', name: '살빼는넘', rarity: 'RARE',
+        color: '#dc7633',
+        hp: 1000, speed: 70, level: 1,
+        hpPlus: 110, speedPlus: 7,
+        passive: '무게',
+        passiveDesc: '체력이 떨어질수록 속도가 빨라집니다.',
+    };
+
+    static MAX_SPEED_MUL = 5;
+
+    constructor() {
+        super();
+        this.maxHp     = DietUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = DietUnit.meta.speed;
+        this.baseSpeed = DietUnit.meta.speed;
+        this.color     = DietUnit.meta.color;
+    }
+
+    spawn(waypoints, hpMul, spdMul) {
+        super.spawn(waypoints, hpMul, spdMul);
+        this.baseSpeed = this.speed;
+    }
+
+    update(deltaTime, units) {
+        if (!this.active || !this.alive) return;
+        const hpRatio = this.hp / this.maxHp;
+        this.speed = Math.floor(this.baseSpeed * (1 + (DietUnit.MAX_SPEED_MUL - 1) * (1 - hpRatio)));
+        super.update(deltaTime, units);
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        const boost = 1 - (this.hp / this.maxHp);
+        if (boost > 0.1) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12 + 5 * boost, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, boost * 0.75);
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
+    }
+}
+
+export class TiredUnit extends Unit {
+    static meta = {
+        type: 'TiredUnit', name: '힘든넘', rarity: 'RARE',
+        color: '#5d8aa8',
+        hp: 500, speed: 350, level: 1,
+        hpPlus: 60, speedPlus: 18,
+        passive: ['저질체력', '비행'],
+        passiveDesc: ['체력이 떨어질수록 속도가 느려집니다.', '특정 타워의 공격을 받지 않습니다.'],
+    };
+
+    static MIN_SPEED_RATIO = 0.3;
+
+    constructor() {
+        super();
+        this.maxHp     = TiredUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = TiredUnit.meta.speed;
+        this.baseSpeed = TiredUnit.meta.speed;
+        this.color     = TiredUnit.meta.color;
+        this.isFlying  = true;
+    }
+
+    spawn(waypoints, hpMul, spdMul) {
+        super.spawn(waypoints, hpMul, spdMul);
+        this.baseSpeed = this.speed;
+    }
+
+    update(deltaTime, units) {
+        if (!this.active || !this.alive) return;
+        const hpRatio  = this.hp / this.maxHp;
+        this.speed = Math.floor(this.baseSpeed * (TiredUnit.MIN_SPEED_RATIO + (1 - TiredUnit.MIN_SPEED_RATIO) * hpRatio));
+        super.update(deltaTime, units);
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        const fatigue = 1 - (this.hp / this.maxHp);
+        if (fatigue > 0.1) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12 + 4 * fatigue, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, fatigue * 0.7);
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
+    }
+}
+
 export class InvisibleUnit extends Unit {
     static meta = {
         type: 'InvisibleUnit', name: '투명한넘', rarity: 'HERO',
-        ico: '투', bg: '#e0e0e8', fg: '#5a5a7a',
+        color: '#aab7b8',
         hp: 350, speed: 250, level: 1,
         hpPlus: 40, speedPlus: 20, timePlus: 0.5,
         passive: '투명', time: 1,
@@ -414,7 +513,7 @@ export class InvisibleUnit extends Unit {
         this.maxHp       = InvisibleUnit.meta.hp;
         this.hp          = this.maxHp;
         this.speed       = InvisibleUnit.meta.speed;
-        this.color       = '#95a5a6';
+        this.color       = InvisibleUnit.meta.color;
         this.isInvisible = false;
         this.invisTimer  = 0;
     }
@@ -448,7 +547,7 @@ export class InvisibleUnit extends Unit {
 export class SplitUnit extends Unit {
     static meta = {
         type: 'SplitUnit', name: '분열하는넘', rarity: 'HERO',
-        ico: '분', bg: '#fde8e0', fg: '#a03000',
+        color: '#cd6155',
         hp: 700, speed: 120, level: 1,
         hpPlus: 50, speedPlus: 10, splitPlus: 1,
         passive: '분열', splitNum: 2,
@@ -460,7 +559,7 @@ export class SplitUnit extends Unit {
         this.maxHp    = SplitUnit.meta.hp;
         this.hp       = this.maxHp;
         this.speed    = SplitUnit.meta.speed;
-        this.color    = '#e17055';
+        this.color    = SplitUnit.meta.color;
         this.isSplit  = false;
         this.splitNum = SplitUnit.meta.splitNum;
     }
@@ -540,7 +639,7 @@ export class SplitUnit extends Unit {
         ctx.fill();
 
         if (this.isPoisoned) {
-            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 200);
             ctx.beginPath();
             ctx.arc(this.x, this.y, 9, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
@@ -563,7 +662,7 @@ export class SplitUnit extends Unit {
         }
 
         if (this.isPoisoned) {
-            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 200);
             ctx.beginPath();
             ctx.arc(this.x, this.y, 11, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(125, 186, 0, ${0.5 + 0.4 * pulse})`;
@@ -582,10 +681,116 @@ export class SplitUnit extends Unit {
     }
 }
 
+export class DashUnit extends Unit {
+    static meta = {
+        type: 'DashUnit', name: '돌진하는넘', rarity: 'HERO',
+        color: '#f39c12',
+        hp: 400, speed: 160, level: 1,
+        hpPlus: 50, speedPlus: 20, dashMinus: 0.5,
+        passive: '돌진', dashTime: 2,
+        passiveDesc: (time) => `${time}초 마다 짧은 거리를 돌진합니다.\n돌진 중 무적 상태가 됩니다.`,
+    };
+
+    static DASH_SPEED    = 800;
+    static DASH_DURATION = 0.15;
+
+    constructor() {
+        super();
+        this.maxHp       = DashUnit.meta.hp;
+        this.hp          = this.maxHp;
+        this.speed       = DashUnit.meta.speed;
+        this.color       = DashUnit.meta.color;
+        this.dashTimer   = 0;
+        this.dashTime    = DashUnit.meta.dashTime;
+        this.isDashing   = false;
+        this.dashElapsed = 0;
+        this.dashFlash   = 0;
+    }
+
+    takeDamage(amount, units) {
+        if (this.isDashing) return;
+        super.takeDamage(amount, units);
+    }
+
+    update(deltaTime, units) {
+        if (!this.active || !this.alive) return;
+        const dt = deltaTime / 1000;
+
+        if (this.healFlash > 0) this.healFlash = Math.max(0, this.healFlash - deltaTime / 400);
+        if (this.dashFlash > 0) this.dashFlash = Math.max(0, this.dashFlash - deltaTime / 300);
+
+        // 독 처리 (돌진 중엔 면역)
+        if (this.isPoisoned) {
+            this.poisonTimer -= dt;
+            if (this.poisonTimer <= 0) {
+                this.isPoisoned = false; this.poisonTimer = 0; this.poisonDps = 0;
+            } else if (!this.isDashing) {
+                this.takeDamage(this.poisonDps * dt, units);
+                if (!this.active || !this.alive) return;
+            }
+        }
+
+        // 돌진 상태 관리
+        if (this.isDashing) {
+            this.dashElapsed += dt;
+            if (this.dashElapsed >= DashUnit.DASH_DURATION) {
+                this.isDashing   = false;
+                this.dashElapsed = 0;
+                this.dashTimer   = 0;
+            }
+        } else {
+            this.dashTimer += dt;
+            if (this.dashTimer >= this.dashTime) {
+                this.isDashing   = true;
+                this.dashElapsed = 0;
+                this.dashFlash   = 1;
+            }
+        }
+
+        // 이동 (돌진 중엔 고속)
+        const moveSpeed  = this.isDashing ? DashUnit.DASH_SPEED : this.speed;
+        const wp         = this.waypoints[this.waypointIndex];
+        const dx         = wp.x - this.x;
+        const dy         = wp.y - this.y;
+        const distance   = Math.sqrt(dx * dx + dy * dy);
+        const moveAmount = moveSpeed * dt;
+
+        if (distance <= moveAmount) {
+            this.distanceTraveled += distance;
+            this.x = wp.x;
+            this.y = wp.y;
+            this.waypointIndex++;
+            if (this.waypointIndex >= this.waypoints.length) {
+                this.active = false;
+                game.survivedCount++;
+                checkWaveEnd();
+            }
+            return;
+        }
+
+        this.distanceTraveled += moveAmount;
+        this.x += (dx / distance) * moveAmount;
+        this.y += (dy / distance) * moveAmount;
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        if (this.isDashing || this.dashFlash > 0) {
+            const alpha = this.isDashing ? 0.65 : this.dashFlash * 0.5;
+            const r     = 12 + 6 * (this.isDashing ? 1 : 1 - this.dashFlash);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, alpha);
+            ctx.lineWidth   = 3;
+            ctx.stroke();
+        }
+    }
+}
+
 export class EvadeUnit extends Unit {
     static meta = {
         type: 'EvadeUnit', name: '잽싼넘', rarity: 'LEGEND',
-        ico: '잽', bg: '#b8ede4', fg: '#0a6a4a',
+        color: '#1abc9c',
         hp: 100, speed: 400, level: 1,
         hpPlus: 50, speedPlus: 20, dodgePlus: 10,
         passive: '회피', dodgeProb: 10,
@@ -596,7 +801,7 @@ export class EvadeUnit extends Unit {
         this.maxHp     = EvadeUnit.meta.hp;
         this.hp        = this.maxHp;
         this.speed     = EvadeUnit.meta.speed;
-        this.color     = '#1abc9c';
+        this.color     = EvadeUnit.meta.color;
         this.dodgeProb = EvadeUnit.meta.dodgeProb;
     }
     takeDamage(amount, units) {
@@ -608,7 +813,7 @@ export class EvadeUnit extends Unit {
 export class TimeUnit extends Unit {
     static meta = {
         type: 'TimeUnit', name: '시간돌리는넘', rarity: 'LEGEND',
-        ico: '시', bg: '#f0e8f8', fg: '#4a1a6a',
+        color: '#6c3483',
         hp: 450, speed: 200, level: 1,
         hpPlus: 60, speedPlus: 25, returnPlus: 15,
         passive: '시간역행', returnHp: 40,
@@ -619,7 +824,7 @@ export class TimeUnit extends Unit {
         this.maxHp        = TimeUnit.meta.hp;
         this.hp           = this.maxHp;
         this.speed        = TimeUnit.meta.speed;
-        this.color        = '#6c3483';
+        this.color        = TimeUnit.meta.color;
         this.returnHp     = TimeUnit.meta.returnHp;
         this.reversed     = false;
         this.reverseFlash = 0;
@@ -652,20 +857,15 @@ export class TimeUnit extends Unit {
             const dy     = wp[i + 1].y - wp[i].y;
             const segLen = Math.sqrt(dx * dx + dy * dy);
             if (cumDist + segLen >= targetDist) {
-                const t              = (targetDist - cumDist) / segLen;
-                this.x               = wp[i].x + dx * t;
-                this.y               = wp[i].y + dy * t;
-                this.waypointIndex   = i + 1;
+                const t               = (targetDist - cumDist) / segLen;
+                this.x                = wp[i].x + dx * t;
+                this.y                = wp[i].y + dy * t;
+                this.waypointIndex    = i + 1;
                 this.distanceTraveled = targetDist;
                 return;
             }
             cumDist += segLen;
         }
-        // targetDist가 0에 가까울 때 폴백
-        this.x                = wp[0].x;
-        this.y                = wp[0].y;
-        this.waypointIndex    = 1;
-        this.distanceTraveled = 0;
     }
 
     _drawBody(ctx) {
@@ -685,8 +885,8 @@ export const shatterEffects = [];
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
     FlyUnit, ShieldUnit, HealUnit,
-    TauntUnit, BuffUnit,
-    InvisibleUnit, SplitUnit,
+    TauntUnit, BuffUnit, DietUnit, TiredUnit,
+    InvisibleUnit, SplitUnit, DashUnit,
     EvadeUnit, TimeUnit,
 ];
 export const UNIT_CLASS = Object.fromEntries(UNIT_CLASSES.map(Cls => [Cls.name, Cls]));
