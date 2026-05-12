@@ -108,6 +108,12 @@ body {
 
 #wave-prog-bar {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wp-row {
+  display: flex;
   gap: 3px;
 }
 
@@ -122,6 +128,7 @@ body {
 .wp.done { background: #2a8a00; }
 .wp.cur  { background: #0a2aaa; }
 .wp.boss { background: #aa1800; }
+.wp.aug  { background: #ccaa00; }
 
 #wave-right {
   display: flex;
@@ -357,7 +364,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+}
+.deploy-header .panel-section-title {
+  margin-bottom: 0;
 }
 
 .deploy-count {
@@ -406,6 +416,14 @@ body {
 .deploy-slot.drag-over {
   border-color: #0a2aaa;
   background: #c8d0e8;
+}
+.deploy-slot.drag-insert-before {
+  border-color: #0a2aaa;
+  box-shadow: inset 4px 0 0 #0a2aaa;
+}
+.deploy-slot.drag-insert-after {
+  border-color: #0a2aaa;
+  box-shadow: inset -4px 0 0 #0a2aaa;
 }
 
 .deploy-slot.dragging { opacity: 0.4; }
@@ -1654,4 +1672,143 @@ body {
 #tutorial-page {
     font-size: 14px;
     color: #6a5a3a;
+}
+
+/* ── 증강 선택 ─────────────────────────────── */
+#aug-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.80);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#aug-modal {
+    background: #1a1208;
+    border: 4px solid #c8b88a;
+    box-shadow: 0 0 0 6px #2a1a0a, 10px 10px 0 6px #000;
+    padding: 30px 32px 26px;
+    width: 860px;
+    max-width: 94vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    font-family: 'NeoDunggeunmo', monospace;
+    image-rendering: pixelated;
+    zoom: var(--ui-scale, 1);
+}
+
+#aug-title {
+    font-size: 20px;
+    color: #e8d8a0;
+    letter-spacing: 6px;
+}
+
+#aug-subtitle {
+    font-size: 12px;
+    color: #6a5a3a;
+    margin-top: -12px;
+    letter-spacing: 3px;
+}
+
+#aug-cards {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.aug-card {
+    flex: 1;
+    border: 3px solid var(--rc, #4a4a4a);
+    background: #2a2010;
+    padding: 16px 14px 18px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: background 0.1s, box-shadow 0.1s;
+}
+.aug-card:hover {
+    background: #3a3020;
+    box-shadow: 0 0 10px var(--rc, #4a4a4a);
+}
+
+.aug-card-rarity {
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+.aug-card-name {
+    font-size: 16px;
+    color: #e8d8b8;
+    line-height: 1.3;
+}
+
+.aug-card-desc {
+    font-size: 12px;
+    color: #9a8a72;
+    line-height: 1.7;
+    flex: 1;
+}
+
+#aug-skip {
+    background: none;
+    border: 2px solid #4a3a2a;
+    color: #7a6a52;
+    font-family: 'NeoDunggeunmo', monospace;
+    font-size: 13px;
+    padding: 10px 28px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: border-color 0.1s, color 0.1s;
+}
+#aug-skip:hover {
+    border-color: #c8a850;
+    color: #c8a850;
+}
+
+/* 증강 패널 */
+.aug-panel-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #a09070;
+  font-size: 13px;
+}
+
+.aug-panel-card {
+  border: 3px solid var(--rc, #8a7a5a);
+  background: #f0e8d0;
+  margin: 8px 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aug-panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.aug-panel-rarity {
+  font-size: 11px;
+  color: #a09070;
+  letter-spacing: 1px;
+}
+
+.aug-panel-name {
+  font-size: 15px;
+  color: #2a1a0a;
+}
+
+.aug-panel-desc {
+  font-size: 12px;
+  color: #6a5a3a;
+  line-height: 1.7;
+  white-space: pre-line;
 }

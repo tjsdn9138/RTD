@@ -1,4 +1,5 @@
 import { game, checkWaveEnd } from './state.js';
+import { dispatchAug } from './augmentations.js';
 
 // 16진수 hex → rgba 문자열 (이펙트가 unit color와 자동 동기화되도록)
 function hexToRgba(hex, alpha) {
@@ -74,6 +75,7 @@ export class Unit {
             if (this.waypointIndex >= this.waypoints.length) {
                 this.active = false;
                 game.survivedCount++;
+                dispatchAug('onUnitSurvive', this);
                 checkWaveEnd();
             }
             return;
@@ -87,12 +89,27 @@ export class Unit {
     }
 
     // 피격 시 데미지 계산
-    takeDamage(amount, units) {
-        this.hp -= amount * (1 - this.damageReduction / 100);
+    takeDamage(amount, units, attacker = null) {
+        if (this.shield) { this.shield = false; return; }
+        if (attacker !== null) {
+            if (attacker === this.lastAttacker) {
+                this.adaptStacks = (this.adaptStacks || 0) + 1;
+            } else {
+                this.adaptStacks = 0;
+                this.lastAttacker = attacker;
+            }
+        }
+        const adaptRed = this.adaptReductionPerStack
+            ? Math.min(this.adaptMaxReduction || 0, (this.adaptStacks || 0) * this.adaptReductionPerStack)
+            : 0;
+        const totalReduction = this.damageReduction + (this.proximityBonus || 0) + adaptRed;
+        this.hp -= amount * (1 - totalReduction / 100) * (1 + game.damageTakenBonus / 100);
         if (this.hp <= 0) {
+            if (this.undying) { this.undying = false; this.hp = 1; return; }
             this.alive  = false;
             this.active = false;
             game.deadCount++;
+            dispatchAug('onUnitDeath', this, units);
             checkWaveEnd();
         }
     }
@@ -123,6 +140,21 @@ export class Unit {
         }
 
         this._drawBody(ctx);
+
+        if (this.shield) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 220, 50, 0.9)';
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
+        if (this.undying) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(160, 30, 220, 0.7)';
+            ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
 
         ctx.fillStyle = '#e74c3c';
         ctx.fillRect(this.x - 20, this.y - 25, 40, 6);
@@ -202,8 +234,8 @@ export class FlyUnit extends Unit {
     static meta = {
         type: 'FlyUnit', name: '날라댕기는넘', rarity: 'UNCOMMON',
         color: '#5dade2',
-        hp: 300, speed: 180, level: 1,
-        hpPlus: 35, speedPlus: 10,
+        hp: 350, speed: 180, level: 1,
+        hpPlus: 45, speedPlus: 10,
         passive: '비행',
         passiveDesc: '특정 타워의 공격을 받지 않습니다.',
     };
@@ -222,8 +254,8 @@ export class ShieldUnit extends Unit {
         type: 'ShieldUnit', name: '방패든넘', rarity: 'UNCOMMON',
         color: '#7f8c8d',
         hp: 600, speed: 150, level: 1,
-        hpPlus: 70, speedPlus: 10, defPlus: 10,
-        passive: '방어', defense: 10,
+        hpPlus: 70, speedPlus: 10, defPlus: 20,
+        passive: '방어', defense: 20,
         passiveDesc: (def) => `받는 데미지를 ${def}만큼 감소시킵니다.`,
     };
     constructor() {
@@ -234,9 +266,9 @@ export class ShieldUnit extends Unit {
         this.defense = ShieldUnit.meta.defense;
         this.color   = ShieldUnit.meta.color;
     }
-    takeDamage(amount, units) {
+    takeDamage(amount, units, attacker = null) {
         const reduced = Math.max(0, amount - this.defense);
-        super.takeDamage(reduced, units);
+        super.takeDamage(reduced, units, attacker);
     }
 }
 
@@ -245,8 +277,8 @@ export class HealUnit extends Unit {
         type: 'HealUnit', name: '힐주는넘', rarity: 'UNCOMMON',
         color: '#2ecc71',
         hp: 300, speed: 200, level: 1,
-        hpPlus: 35, speedPlus: 10, healPlus: 30,
-        passive: '힐', heal: 50,
+        hpPlus: 40, speedPlus: 10, healPlus: 100,
+        passive: '힐', heal: 100,
         passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 아군 한명의 체력을 ${heal}만큼 회복시킵니다.`,
     };
 
@@ -454,7 +486,7 @@ export class TiredUnit extends Unit {
         type: 'TiredUnit', name: '힘든넘', rarity: 'RARE',
         color: '#5d8aa8',
         hp: 500, speed: 350, level: 1,
-        hpPlus: 60, speedPlus: 18,
+        hpPlus: 65, speedPlus: 30,
         passive: ['저질체력', '비행'],
         passiveDesc: ['체력이 떨어질수록 속도가 느려집니다.', '특정 타워의 공격을 받지 않습니다.'],
     };
@@ -501,7 +533,7 @@ export class InvisibleUnit extends Unit {
         type: 'InvisibleUnit', name: '투명한넘', rarity: 'HERO',
         color: '#aab7b8',
         hp: 350, speed: 250, level: 1,
-        hpPlus: 40, speedPlus: 20, timePlus: 0.5,
+        hpPlus: 55, speedPlus: 30, timePlus: 0.5,
         passive: '투명', time: 1,
         passiveDesc: (time) => `2초마다 ${time}초 동안 타겟이 되지 않습니다.`,
     };
@@ -549,7 +581,7 @@ export class SplitUnit extends Unit {
         type: 'SplitUnit', name: '분열하는넘', rarity: 'HERO',
         color: '#cd6155',
         hp: 700, speed: 120, level: 1,
-        hpPlus: 50, speedPlus: 10, splitPlus: 1,
+        hpPlus: 95, speedPlus: 15, splitPlus: 1,
         passive: '분열', splitNum: 2,
         passiveDesc: (num) => `사망 시 ${num}마리로 분열합니다.\n분열된 유닛은 30%의 체력과 200%의 속도를 갖습니다.`,
     };
@@ -564,8 +596,9 @@ export class SplitUnit extends Unit {
         this.splitNum = SplitUnit.meta.splitNum;
     }
 
-    takeDamage(amount, units) {
-        const actualDamage = amount * (1 - this.damageReduction / 100);
+    takeDamage(amount, units, attacker = null) {
+        if (this.shield) { this.shield = false; return; }
+        const actualDamage = amount * (1 - this.damageReduction / 100) * (1 + game.damageTakenBonus / 100);
         if (!this.isSplit && this.hp - actualDamage <= 0) {
             this.alive  = false;
             this.active = false;
@@ -584,7 +617,7 @@ export class SplitUnit extends Unit {
             checkWaveEnd();
             return;
         }
-        super.takeDamage(amount, units);
+        super.takeDamage(amount, units, attacker);
     }
 
     _spawnChildren(units) {
@@ -685,8 +718,8 @@ export class DashUnit extends Unit {
     static meta = {
         type: 'DashUnit', name: '돌진하는넘', rarity: 'HERO',
         color: '#f39c12',
-        hp: 400, speed: 160, level: 1,
-        hpPlus: 50, speedPlus: 20, dashMinus: 0.5,
+        hp: 400, speed: 200, level: 1,
+        hpPlus: 65, speedPlus: 30, dashMinus: 0.5,
         passive: '돌진', dashTime: 2,
         passiveDesc: (time) => `${time}초 마다 짧은 거리를 돌진합니다.\n돌진 중 무적 상태가 됩니다.`,
     };
@@ -707,9 +740,9 @@ export class DashUnit extends Unit {
         this.dashFlash   = 0;
     }
 
-    takeDamage(amount, units) {
+    takeDamage(amount, units, attacker = null) {
         if (this.isDashing) return;
-        super.takeDamage(amount, units);
+        super.takeDamage(amount, units, attacker);
     }
 
     update(deltaTime, units) {
@@ -763,6 +796,7 @@ export class DashUnit extends Unit {
             if (this.waypointIndex >= this.waypoints.length) {
                 this.active = false;
                 game.survivedCount++;
+                dispatchAug('onUnitSurvive', this);
                 checkWaveEnd();
             }
             return;
@@ -791,9 +825,9 @@ export class EvadeUnit extends Unit {
     static meta = {
         type: 'EvadeUnit', name: '잽싼넘', rarity: 'LEGEND',
         color: '#1abc9c',
-        hp: 100, speed: 400, level: 1,
-        hpPlus: 50, speedPlus: 20, dodgePlus: 10,
-        passive: '회피', dodgeProb: 10,
+        hp: 200, speed: 400, level: 1,
+        hpPlus: 70, speedPlus: 40, dodgePlus: 20,
+        passive: '회피', dodgeProb: 20,
         passiveDesc: (prob) => `${prob}% 확률로 공격을 피합니다.`,
     };
     constructor() {
@@ -804,9 +838,9 @@ export class EvadeUnit extends Unit {
         this.color     = EvadeUnit.meta.color;
         this.dodgeProb = EvadeUnit.meta.dodgeProb;
     }
-    takeDamage(amount, units) {
+    takeDamage(amount, units, attacker = null) {
         if (Math.random() < this.dodgeProb / 100) return;
-        super.takeDamage(amount, units);
+        super.takeDamage(amount, units, attacker);
     }
 }
 
@@ -814,9 +848,9 @@ export class TimeUnit extends Unit {
     static meta = {
         type: 'TimeUnit', name: '시간돌리는넘', rarity: 'LEGEND',
         color: '#6c3483',
-        hp: 450, speed: 200, level: 1,
-        hpPlus: 60, speedPlus: 25, returnPlus: 15,
-        passive: '시간역행', returnHp: 40,
+        hp: 450, speed: 250, level: 1,
+        hpPlus: 90, speedPlus: 30, returnPlus: 10,
+        passive: '시간역행', returnHp: 60,
         passiveDesc: (prob) => `사망 직전 체력을 ${prob}% 회복하며 시간을 되돌립니다.`,
     };
     constructor() {
@@ -837,8 +871,9 @@ export class TimeUnit extends Unit {
         }
     }
 
-    takeDamage(amount, units) {
-        const actualDamage = amount * (1 - this.damageReduction / 100);
+    takeDamage(amount, units, attacker = null) {
+        if (this.shield) { this.shield = false; return; }
+        const actualDamage = amount * (1 - this.damageReduction / 100) * (1 + game.damageTakenBonus / 100);
         if (!this.reversed && this.hp - actualDamage <= 0) {
             this.reversed     = true;
             this.reverseFlash = 1;
@@ -846,7 +881,7 @@ export class TimeUnit extends Unit {
             this._reversePosition(this.distanceTraveled / 2);
             return;
         }
-        super.takeDamage(amount, units);
+        super.takeDamage(amount, units, attacker);
     }
 
     _reversePosition(targetDist) {

@@ -100,7 +100,7 @@ export class Tower {
         if (!this._tickReady(deltaTime)) return;
         const target = this._selectTarget(units);
         if (target) {
-            target.takeDamage(this.getDamage(target), units);
+            target.takeDamage(this.getDamage(target), units, this);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
@@ -190,7 +190,7 @@ export class SkyTower extends Tower {
         if (!this._tickReady(deltaTime)) return;
         const target = this._selectTarget(units, { prefer: u => u.isFlying });
         if (target) {
-            target.takeDamage(this.getDamage(target), units);
+            target.takeDamage(this.getDamage(target), units, this);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
@@ -217,7 +217,7 @@ export class InfraredTower extends Tower {
         if (!this._tickReady(deltaTime)) return;
         const target = this._selectTarget(units, { skipInvisible: false, prefer: u => u.isInvisible });
         if (target) {
-            target.takeDamage(this.getDamage(target), units);
+            target.takeDamage(this.getDamage(target), units, this);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
@@ -246,7 +246,7 @@ export class PoisonTower extends Tower {
         const target = this._selectTarget(units, { skipFlying: true, prefer: u => !u.isPoisoned });
         if (target) {
             const dmg = this.getDamage(target);
-            target.takeDamage(dmg, units);
+            target.takeDamage(dmg, units, this);
             target.isPoisoned  = true;
             target.poisonTimer = PoisonTower.meta.poisonTime;
             target.poisonDps   = dmg;
@@ -283,7 +283,7 @@ export class AreaTower extends Tower {
             if (unit.isInvisible) return;
             if (unit.isFlying) return;
             if (this.getDistance(unit) > this.range) return;
-            unit.takeDamage(this.getDamage(unit), units);
+            unit.takeDamage(this.getDamage(unit), units, this);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: unit.x, y2: unit.y, color: this.color, timer: 0, duration: 0.2 });
             attacked = true;
         });
@@ -294,7 +294,7 @@ export class AreaTower extends Tower {
 export class ChainTower extends Tower {
     static meta = {
         name: '전이 타워', rarity: 'RARE',
-        damage: 200, attackSpeed: 0.7, range: 160,
+        damage: 150, attackSpeed: 0.7, range: 160,
         dmgPlus: 20, speedPlus: 0.07, rangePlus: 16,
         passive: '전이', decDamage: 75,
         passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
@@ -318,7 +318,7 @@ export class ChainTower extends Tower {
         // 1차 공격
         const hit     = new Set([target]);
         const baseDmg = this.getDamage(target);
-        target.takeDamage(baseDmg, units);
+        target.takeDamage(baseDmg, units, this);
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25, lineWidth: 3, dotRadius: 6, glow: true });
         attackFlashes.push({ ring: true, x: target.x, y: target.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
 
@@ -349,7 +349,7 @@ export class ChainTower extends Tower {
             const lineWidth = 3 - i * 0.5;
             const dotRadius = 5 - i * 0.8;
             hit.add(next);
-            next.takeDamage(chainDamage, units);
+            next.takeDamage(chainDamage, units, this);
             attackFlashes.push({ x1: prev.x, y1: prev.y, x2: next.x, y2: next.y, color: this.color, timer: 0, duration: 0.3, lineWidth, dotRadius, glow: true });
             attackFlashes.push({ ring: true, x: next.x, y: next.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
 
@@ -388,7 +388,7 @@ export class MortarTower extends Tower {
 
         // 주 타겟 공격
         const dmg = this.getDamage(target);
-        target.takeDamage(dmg, units);
+        target.takeDamage(dmg, units, this);
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.2 });
 
         // 폭발 범위 내 스플래시 (주 타겟 제외, 50% 피해)
@@ -398,7 +398,7 @@ export class MortarTower extends Tower {
             if (unit.isFlying) return;
             const dx = unit.x - target.x, dy = unit.y - target.y;
             if (dx * dx + dy * dy > r2) return;
-            unit.takeDamage(dmg * 0.5, units);
+            unit.takeDamage(dmg * 0.5, units, this);
         });
 
         // 폭발 이펙트
@@ -452,12 +452,12 @@ export class SniperTower extends Tower {
         target = tauntTarget ?? target;
 
         if (target) {
-            target.takeDamage(this.getDamage(target), units);
+            target.takeDamage(this.getDamage(target), units, this);
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.4 });
 
             // 체력 10% 이하면 즉시 처형 (살아있는 경우에만)
             if (target.alive && target.hp / target.maxHp <= 0.1) {
-                target.takeDamage(target.hp, units);
+                target.takeDamage(target.hp, units, this);
             }
         }
         this._consumeTick(!!target);
@@ -532,7 +532,7 @@ export class InfernoTower extends Tower {
         // 공격: 누적 시간에 비례해 DPS 증가
         this.burnTime += dt;
         const dps = this.getDamage(this.currentTarget) * (1 + this.burnTime);
-        this.currentTarget.takeDamage(dps * dt, units);
+        this.currentTarget.takeDamage(dps * dt, units, this);
 
         // 빔 이펙트: burnTime에 따라 굵어짐
         const beamWidth = Math.min(6, 1.5 + this.burnTime * 0.4);
@@ -625,7 +625,7 @@ export class AllRoundTower extends Tower {
                 this.aoeTimer -= 1;
                 units.forEach(unit => {
                     if (!canTarget(unit)) return;
-                    unit.takeDamage(this.getDamage(unit) * 0.1, units);
+                    unit.takeDamage(this.getDamage(unit) * 0.1, units, this);
                     attackFlashes.push({ x1: this.x, y1: this.y, x2: unit.x, y2: unit.y, color: this.color, timer: 0, duration: 0.15 });
                 });
             }
@@ -652,7 +652,7 @@ export class AllRoundTower extends Tower {
         }
 
         const dmg = this.getDamage(target) * (hasInferno ? this.burnMul : 1);
-        target.takeDamage(dmg, units);
+        target.takeDamage(dmg, units, this);
         if (hasInferno) this.burnMul *= 1.05;
 
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
@@ -681,7 +681,7 @@ export class AllRoundTower extends Tower {
                 });
                 if (!next) break;
                 hit.add(next);
-                next.takeDamage(this.getDamage(next) * 0.5, units);
+                next.takeDamage(this.getDamage(next) * 0.5, units, this);
                 attackFlashes.push({ x1: prev.x, y1: prev.y, x2: next.x, y2: next.y, color: this.color, timer: 0, duration: 0.3, lineWidth: 2, dotRadius: 4, glow: true });
                 prev = next;
             }
@@ -689,7 +689,7 @@ export class AllRoundTower extends Tower {
 
         // 저격 타워: 체력 5% 미만 즉시 처형
         if (hasSniper && target.alive && target.hp / target.maxHp < 0.05) {
-            target.takeDamage(target.hp, units);
+            target.takeDamage(target.hp, units, this);
         }
 
         this.attackTimer -= 1 / this.attackSpeed;

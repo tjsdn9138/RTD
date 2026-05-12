@@ -13,6 +13,7 @@ export const game = {
     lives: 3,
     gold: 100,
     unitSlots: 2,
+    boughtSlots: 0,
     spawnTimer: 0,
     spawnInterval: 0.25,
     spawnCount: 0,
@@ -26,7 +27,11 @@ export const game = {
     pendingItem: null, // 사용 대기 중인 소비 아이템 type
     goldBonus: 0,
     autoSpawn: false,  // 자동 출전 활성화 여부
+    manualSpawnDisabled: false, // 수동 출전 차단 여부 (AI의 반란)
     gachaPulls: { unit: 0, item: 0 },
+    augmentations: [],
+    damageTakenBonus: 0,
+    augWaves: [],
 };
 
 export const MAX_SLOTS       = 10; // 유닛 최대 개수
@@ -34,10 +39,10 @@ export const MAX_UNIT_LEVEL  = 20; // 유닛 최대 레벨
 export const MAX_TOWER_LEVEL = 15; // 타워 최대 레벨
 export const MAX_WAVES       = 50; // 총 웨이브 수
 
-// 유닛 슬롯 추가 가격 계산
-// TODO: 수치 조정
+// 유닛 슬롯 추가 가격 계산 — n*(n+1)/2 * 100 (n = 다음 구매 횟수)
 export function getSlotCost() {
-    return (game.unitSlots - 1) * 100;
+    const n = game.boughtSlots + 1;
+    return n * (n + 1) / 2 * 100;
 }
 
 // 유닛 레벨업 가격 계산
@@ -56,6 +61,7 @@ export function buySlot() {
     if (game.gold < cost || game.unitSlots >= MAX_SLOTS) return null;
     game.gold -= cost;
     game.unitSlots++;
+    game.boughtSlots++;
     return true;
 }
 
@@ -135,4 +141,12 @@ export function nextWave() {
 export function gameWin() {
     game.pendingItem = null;
     game.state       = STATE.GAMECLEAR;
+}
+
+// 게임 시작 시 전체 증강 웨이브 미리 생성 (6~9, 16~19, 26~29 ...)
+export function generateAugWaves() {
+    game.augWaves = [];
+    for (let k = 1; k * 10 - 4 <= MAX_WAVES; k++) {
+        game.augWaves.push(k * 10 - 4 + Math.floor(Math.random() * 4));
+    }
 }

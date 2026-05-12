@@ -43,7 +43,7 @@ export class SpeedCharm extends PassiveItem {
 export class HpCharm extends PassiveItem {
     static meta = {
         name: '체력부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
         desc: (mul) => `아군 전체의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -134,7 +134,7 @@ export class ShieldUnitCharm extends PassiveItem {
     static meta = {
         name: '방패부적', kind: 'passive', rarity: 'RARE',
         level: 1, multiplier: 1.5, LevelUpPlus: 0.5,
-        desc: (mul) => `방패든넘의 패시브 수치를 ${mul} 상승시킵니다.`,
+        desc: (mul) => `방패든넘의 패시브 수치를 ${mul}배 상승시킵니다.`,
     };
     constructor() {
         super('방패부적');
@@ -179,7 +179,7 @@ export class TutorialBook extends ActiveItem {
 
 export class UnitGachaTicket extends ActiveItem {
     static meta = {
-        name: '유닛 뽑기권', kind: 'active', rarity: 'COMMON',
+        name: '유닛 뽑기권', kind: 'active', rarity: 'UNDEFINED',
         desc: '유닛 뽑기를 1회 할 수 있습니다.',
     };
     constructor() {
@@ -189,7 +189,7 @@ export class UnitGachaTicket extends ActiveItem {
 
 export class ItemGachaTicket extends ActiveItem {
     static meta = {
-        name: '아이템 뽑기권', kind: 'active', rarity: 'COMMON',
+        name: '아이템 뽑기권', kind: 'active', rarity: 'UNDEFINED',
         desc: '아이템 뽑기를 1회 할 수 있습니다.',
     };
     constructor() {

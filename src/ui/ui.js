@@ -1,9 +1,11 @@
 import { STATE, game, startWave, nextWave, retryWave, loseLife, gameWin, deploySlots, ownedUnits, getLevelUpCost, MAX_UNIT_LEVEL, MAX_WAVES } from '../game.js';
+import { openAugSelect } from './aug-select.js';
 import { saveGame, deleteSave } from '../save.js';
 import { UNIT_CLASS, UNIT_CLASSES } from '../units.js';
 import { renderUnitPanel, refreshUnitPanel } from './panel-unit.js';
 import { renderUnitListPanel } from './panel-unit-list.js';
 import { renderTowerPanel } from './panel-tower.js';
+import { renderAugPanel }  from './panel-aug.js';
 import { renderBagPanel }  from './panel-bag.js';
 import { renderShopPanel } from './panel-shop.js';
 
@@ -29,6 +31,12 @@ function flashHUD(el, color) {
   setTimeout(() => { el.style.color = ''; }, 400);
 }
 
+export function floatGoldGain(amount) {
+  if (amount <= 0) return;
+  flashHUD(elGoldAmt, '#f59e0b');
+  floatHUD(elGoldAmt, `+${amount}G`, '#f59e0b');
+}
+
 function floatHUD(el, text, color) {
   const span = document.createElement('span');
   span.className = 'hud-float';
@@ -45,6 +53,7 @@ const panels = {
   'unit':      document.getElementById('panel-unit'),
   'unit-list': document.getElementById('panel-unit-list'),
   'tower':     document.getElementById('panel-tower'),
+  'aug':       document.getElementById('panel-aug'),
   'bag':       document.getElementById('panel-bag'),
   'shop':      document.getElementById('panel-shop'),
 };
@@ -59,6 +68,7 @@ function showPanel(key) {
   if (key === 'unit')      renderUnitPanel(panels.unit);
   if (key === 'unit-list') renderUnitListPanel(panels['unit-list']);
   if (key === 'tower')     renderTowerPanel(panels['tower']);
+  if (key === 'aug')       renderAugPanel(panels['aug']);
   if (key === 'bag')       renderBagPanel(panels.bag);
   if (key === 'shop')      renderShopPanel(panels['shop']);
 }
@@ -87,12 +97,18 @@ export function updateHUD() {
   }
 
   const progBar = document.getElementById('wave-prog-bar');
-  if (progBar && progBar.children.length !== MAX_WAVES) {
+  if (progBar && progBar.querySelectorAll('.wp').length !== MAX_WAVES) {
     progBar.innerHTML = '';
-    for (let i = 0; i < MAX_WAVES; i++) {
-      const d = document.createElement('div');
-      d.className = 'wp';
-      progBar.appendChild(d);
+    const half = Math.ceil(MAX_WAVES / 2);
+    for (let row = 0; row < 2; row++) {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'wp-row';
+      for (let i = 0; i < half && row * half + i < MAX_WAVES; i++) {
+        const d = document.createElement('div');
+        d.className = 'wp';
+        rowEl.appendChild(d);
+      }
+      progBar.appendChild(rowEl);
     }
   }
   const bars = progBar ? progBar.querySelectorAll('.wp') : [];
@@ -101,6 +117,7 @@ export function updateHUD() {
     if (i + 1 < game.waveNumber)        bar.classList.add('done');
     else if (i + 1 === game.waveNumber) bar.classList.add('cur');
     else if ((i + 1) % 5 === 0)         bar.classList.add('boss');
+    if (game.augWaves?.includes(i + 1) && i + 1 >= game.waveNumber) bar.classList.add('aug');
   });
 
   if (game.state === STATE.READY) {
@@ -142,6 +159,7 @@ export function updateHUD() {
 
 export function getDeployedUnits() {
   return deploySlots
+    .slice(0, game.unitSlots)
     .filter(Boolean)
     .map(slot => new UNIT_CLASS[slot.type]());
 }
@@ -161,6 +179,7 @@ elBtnStart.addEventListener('click', () => {
     elBtnStart.dispatchEvent(new CustomEvent('wavestart', { detail: { units }, bubbles: true }));
   }
   else if (game.state === STATE.RESULT) {
+    let showAugSelect = false;
     if (game.waveResult === 'CLEAR') {
       if (game.waveNumber >= MAX_WAVES) {
         gameWin();
@@ -181,6 +200,7 @@ elBtnStart.addEventListener('click', () => {
       // nextwavestart 핸들러가 타워 추가/레벨업까지 마친 뒤에 저장
       elBtnStart.dispatchEvent(new CustomEvent('nextwavestart', { bubbles: true }));
       refreshUnitPanel();
+      showAugSelect = game.augWaves?.includes(game.waveNumber) ?? false;
     } else {
       const prevLives = game.lives;
       const prevGold  = game.gold;
@@ -208,6 +228,14 @@ elBtnStart.addEventListener('click', () => {
     }
     updateHUD();
     refreshUnitPanel();
+    if (showAugSelect) {
+      const prevGoldAug = game.gold;
+      openAugSelect(() => {
+        const diff = game.gold - prevGoldAug;
+        if (diff > 0) { flashHUD(elGoldAmt, '#f59e0b'); floatHUD(elGoldAmt, `+${diff}G`, '#f59e0b'); }
+        updateHUD(); refreshUnitPanel(); saveGame(); renderAugPanel(panels['aug']);
+      });
+    }
   }
 });
 
@@ -253,8 +281,9 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // A: 전투 중 자동 출전 토글
+  // A: 전투 중 자동 출전 토글 (수동 출전 불가 상태면 끌 수 없음)
   if (e.code === 'KeyA' && game.state === STATE.BATTLE) {
+    if (game.manualSpawnDisabled) return;
     game.autoSpawn = !game.autoSpawn;
     game.spawnTimer = 0;
     refreshUnitPanel();

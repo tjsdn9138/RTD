@@ -1,11 +1,12 @@
-import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel } from './ui/ui.js';
+import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel, floatGoldGain } from './ui/ui.js';
 import { loadGame, deleteSave, saveGame } from './save.js';
 import { initTitleScreen } from './ui/title.js';
-import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL } from './game.js';
+import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL, generateAugWaves } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
 import { shatterEffects } from './units.js';
 import { applyPassiveItems } from './items.js';
+import { dispatchAug } from './augmentations.js';
 
 // canvas 세팅
 const canvas = document.getElementById('gameCanvas');
@@ -22,6 +23,7 @@ function initMap() {
     waypoints  = getWaypoints(logicalW, logicalH);
     towerSlots = getTowerSlots(logicalW, logicalH);
     relocateTower();
+    game.relocateTowers = relocateTower;
 }
 
 // 타워 위치 재조정
@@ -148,9 +150,11 @@ window.addEventListener('resize', () => {
     if (!isZoom) resizeCanvas();
 });
 
-// 수동 유닛 출전
+// 수동 유닛 출전 (autoSpawn 중엔 차단)
 document.addEventListener('spawnunit', (e) => {
+    if (game.autoSpawn) return;
     e.detail.unit.spawn(waypoints, 1, 1);
+    dispatchAug('onUnitSpawn', e.detail.unit, game.units, waypoints);
 });
 
 // wavestart 이벤트
@@ -159,6 +163,7 @@ document.addEventListener('wavestart', (e) => {
     game.goldBonus = 0;
     applyPassiveItems(game.units, inventory);
     startWave();
+    dispatchAug('onWaveStart', game.units);
     updateHUD();
     refreshUnitPanel();
 });
@@ -388,6 +393,7 @@ function gameLoop(timestamp) {
                 const next = game.units.find(u => !u.spawned);
                 if (next) {
                     next.spawn(waypoints, 1, 1);
+                    dispatchAug('onUnitSpawn', next, game.units, waypoints);
                     if (!game.units.some(u => !u.spawned)) game.autoSpawn = false;
                 } else {
                     game.autoSpawn = false;
@@ -396,6 +402,8 @@ function gameLoop(timestamp) {
             }
         }
 
+        game.units.forEach(u => { u.proximityBonus = 0; });
+        dispatchAug('onUpdate', deltaTime, game.units);
         game.towers.forEach(t => { if (t) t.update(deltaTime, game.units); });
         game.units.forEach(u => u.update(deltaTime, game.units));
 
@@ -403,6 +411,10 @@ function gameLoop(timestamp) {
     }
 
     if (prevState !== STATE.RESULT && game.state === STATE.RESULT) {
+        const prevGold = game.gold;
+        if (game.waveResult === 'CLEAR') dispatchAug('onWaveClear', game.units);
+        else dispatchAug('onWaveFail', game.units);
+        floatGoldGain(game.gold - prevGold);
         updateHUD();
         refreshUnitPanel();
     }
@@ -420,8 +432,11 @@ function gameLoop(timestamp) {
 function startGame(isNew) {
     resizeCanvas();
     if (isNew) {
+        generateAugWaves();
         initFirstTower();
         saveGame();
+    } else if (!game.augWaves.length) {
+        generateAugWaves(); // 구세이브 호환
     }
     initUI();
     requestAnimationFrame(gameLoop);

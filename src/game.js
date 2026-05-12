@@ -23,8 +23,8 @@ export function getGachaCost(kind) {
 }
 
 function getGachaCostAt(kind, pulls) {
-    if (kind === 'unit') return (Math.floor(pulls / 10) + 1) * 25;
-    if (kind === 'item') return (Math.floor(pulls / 10) + 1) * 100;
+    if (kind === 'unit') return (Math.floor(pulls / 20) + 1) * 25;
+    if (kind === 'item') return (Math.floor(pulls / 20) + 1) * 100;
     return 0;
 }
 
@@ -170,17 +170,18 @@ export function checkItemLevelUp(type) {
 // 희귀도 가중치 기반 랜덤 픽
 export function weightedPick(classes) {
     const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
-    const roll = Math.random() * 100;
+    const tiers = rarities
+        .map(r => ({ rarity: r, prob: RARITY[r].prob, candidates: classes.filter(Cls => Cls.meta.rarity === r) }))
+        .filter(t => t.candidates.length > 0);
+    if (tiers.length === 0) return null;
+    const total = tiers.reduce((s, t) => s + t.prob, 0);
+    const roll = Math.random() * total;
     let cumulative = 0;
-    for (const rarity of rarities) {
-        cumulative += RARITY[rarity].prob;
-        if (roll < cumulative) {
-            const candidates = classes.filter(Cls => Cls.meta.rarity === rarity);
-            if (candidates.length === 0) continue;
-            return candidates[Math.floor(Math.random() * candidates.length)];
-        }
+    for (const tier of tiers) {
+        cumulative += tier.prob;
+        if (roll < cumulative) return tier.candidates[Math.floor(Math.random() * tier.candidates.length)];
     }
-    return null;
+    return tiers[tiers.length - 1].candidates[0];
 }
 
 // 지정 등급의 타워 중 중복 제외 랜덤 타워 선택

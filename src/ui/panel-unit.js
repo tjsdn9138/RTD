@@ -16,6 +16,18 @@ function compactSlots() {
   filled.forEach((u, i) => { deploySlots[i] = u; });
 }
 
+function moveSlotToGap(fromIdx, gapIdx) {
+  const filled = deploySlots.slice(0, game.unitSlots).filter(Boolean);
+  const [item] = filled.splice(fromIdx, 1);
+  const insertAt = Math.max(0, Math.min(
+    gapIdx > fromIdx ? gapIdx - 1 : gapIdx,
+    filled.length
+  ));
+  filled.splice(insertAt, 0, item);
+  deploySlots.fill(null);
+  filled.forEach((u, i) => { deploySlots[i] = u; });
+}
+
 // 툴팁 요소 — body에 한 번만 생성
 let tooltip = null;
 function getTooltip() {
@@ -178,15 +190,37 @@ function renderDeploySlots() {
     }
 
     if (i < unlocked) {
-      div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
-      div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+      const isFilled = !!deploySlots[i];
+      div.addEventListener('dragover', e => {
+        e.preventDefault();
+        div.classList.remove('drag-over', 'drag-insert-before', 'drag-insert-after');
+        if (isFilled) {
+          const relX = (e.clientX - div.getBoundingClientRect().left) / div.getBoundingClientRect().width;
+          if (relX < 0.3)      div.classList.add('drag-insert-before');
+          else if (relX > 0.7) div.classList.add('drag-insert-after');
+          else                 div.classList.add('drag-over');
+        } else {
+          div.classList.add('drag-over');
+        }
+      });
+      div.addEventListener('dragleave', () => {
+        div.classList.remove('drag-over', 'drag-insert-before', 'drag-insert-after');
+      });
       div.addEventListener('drop', e => {
         e.preventDefault();
-        div.classList.remove('drag-over');
         const from = parseInt(e.dataTransfer.getData('text/plain'));
-        if (from === i) return;
-        [deploySlots[from], deploySlots[i]] = [deploySlots[i], deploySlots[from]];
-        compactSlots();
+        const wasBefore = div.classList.contains('drag-insert-before');
+        const wasAfter  = div.classList.contains('drag-insert-after');
+        div.classList.remove('drag-over', 'drag-insert-before', 'drag-insert-after');
+        if (from === i && !wasBefore && !wasAfter) return;
+        if (isFilled && wasBefore) {
+          moveSlotToGap(from, i);
+        } else if (isFilled && wasAfter) {
+          moveSlotToGap(from, i + 1);
+        } else {
+          [deploySlots[from], deploySlots[i]] = [deploySlots[i], deploySlots[from]];
+          compactSlots();
+        }
         renderDeploySlots();
         saveGame();
       });

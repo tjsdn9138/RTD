@@ -3,6 +3,7 @@ import { ownedUnits, inventory, deploySlots } from './game.js';
 import { UNIT_CLASSES } from './units.js';
 import { ITEM_CLASSES } from './items.js';
 import { TOWER_CLASS } from './towers.js';
+import { AUGMENTATION_CLASS } from './augmentations.js';
 
 const KEY = 'rtd_save';
 
@@ -15,7 +16,8 @@ export function saveGame() {
         wave:       game.waveNumber,
         lives:      game.lives,
         gold:       game.gold,
-        unitSlots:  game.unitSlots,
+        unitSlots:   game.unitSlots,
+        boughtSlots: game.boughtSlots,
         gachaPulls: { ...game.gachaPulls },
 
         towers: game.towers.map(t => {
@@ -61,6 +63,17 @@ export function saveGame() {
             enabled: i.enabled,
         }])),
 
+        damageTakenBonus: game.damageTakenBonus,
+        manualSpawnDisabled: game.manualSpawnDisabled,
+        augWaves: game.augWaves,
+        augmentations: game.augmentations.map(aug => {
+            const entry = { name: aug.constructor.name };
+            if (aug.done             !== undefined) entry.done             = aug.done;
+            if (aug.goldGiven        !== undefined) entry.goldGiven        = aug.goldGiven;
+            if (aug.wavesRemaining   !== undefined) entry.wavesRemaining   = aug.wavesRemaining;
+            if (aug.originalUnitSlots !== undefined) entry.originalUnitSlots = aug.originalUnitSlots;
+            return entry;
+        }),
         savedAt: Date.now(),
     };
     localStorage.setItem(KEY, JSON.stringify(data));
@@ -77,7 +90,21 @@ export function loadGame() {
         game.lives       = data.lives;
         game.gold        = data.gold;
         game.unitSlots   = data.unitSlots;
+        game.boughtSlots = data.boughtSlots ?? 0;
         game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
+        game.damageTakenBonus = data.damageTakenBonus ?? 0;
+        game.augWaves = data.augWaves ?? [];
+        game.augmentations = (data.augmentations ?? []).map(entry => {
+            const name = typeof entry === 'string' ? entry : entry.name;
+            const Cls = AUGMENTATION_CLASS[name];
+            if (!Cls) return null;
+            const aug = new Cls();
+            if (entry.done              !== undefined) aug.done              = entry.done;
+            if (entry.goldGiven         !== undefined) aug.goldGiven         = entry.goldGiven;
+            if (entry.wavesRemaining    !== undefined) aug.wavesRemaining    = entry.wavesRemaining;
+            if (entry.originalUnitSlots !== undefined) aug.originalUnitSlots = entry.originalUnitSlots;
+            return aug;
+        }).filter(Boolean);
 
         // 타워 복원 (위치는 나중에 relocateTower() 가 처리)
         if (data.towers) {
