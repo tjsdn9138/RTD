@@ -31,11 +31,13 @@ function flashHUD(el, color) {
   setTimeout(() => { el.style.color = ''; }, 400);
 }
 
-export function floatGoldGain(amount) {
-  if (amount <= 0) return;
+let _goldAnimReady = false;
+document.addEventListener('goldgain', e => {
+  if (!_goldAnimReady) return;
   flashHUD(elGoldAmt, '#f59e0b');
-  floatHUD(elGoldAmt, `+${amount}G`, '#f59e0b');
-}
+  floatHUD(elGoldAmt, `+${e.detail}G`, '#f59e0b');
+  elGoldAmt.textContent = game.gold;
+});
 
 function floatHUD(el, text, color) {
   const span = document.createElement('span');
@@ -188,32 +190,20 @@ elBtnStart.addEventListener('click', () => {
         refreshUnitPanel();
         return;
       }
-      const prevGold = game.gold;
       nextWave();
       document.querySelector('.bag-card.selected')?.classList.remove('selected');
       refreshBagPanel();
-      const goldDiff = game.gold - prevGold;
-      if (goldDiff > 0) {
-        flashHUD(elGoldAmt, '#f59e0b');
-        floatHUD(elGoldAmt, `+${goldDiff}G`, '#f59e0b');
-      }
       // nextwavestart 핸들러가 타워 추가/레벨업까지 마친 뒤에 저장
       elBtnStart.dispatchEvent(new CustomEvent('nextwavestart', { bubbles: true }));
       refreshUnitPanel();
       showAugSelect = game.augWaves?.includes(game.waveNumber) ?? false;
     } else {
       const prevLives = game.lives;
-      const prevGold  = game.gold;
       loseLife();
-      const goldDiff  = game.gold - prevGold;
 
       if (game.lives < prevLives) {
         flashHUD(elLifeAmt, '#e74c3c');
         floatHUD(elLifeAmt, '-1', '#e74c3c');
-      }
-      if (goldDiff > 0) {
-        flashHUD(elGoldAmt, '#f59e0b');
-        floatHUD(elGoldAmt, `+${goldDiff}G`, '#f59e0b');
       }
 
       if (game.state === STATE.GAMEOVER) {
@@ -229,10 +219,7 @@ elBtnStart.addEventListener('click', () => {
     updateHUD();
     refreshUnitPanel();
     if (showAugSelect) {
-      const prevGoldAug = game.gold;
       openAugSelect(() => {
-        const diff = game.gold - prevGoldAug;
-        if (diff > 0) { flashHUD(elGoldAmt, '#f59e0b'); floatHUD(elGoldAmt, `+${diff}G`, '#f59e0b'); }
         updateHUD(); refreshUnitPanel(); saveGame(); renderAugPanel(panels['aug']);
       });
     }
@@ -258,6 +245,12 @@ export function refreshBagPanel() {
 export function initUI() {
   renderUnitPanel(panels.unit);
   updateHUD();
+  _goldAnimReady = true;
+  if (game.augPending) {
+    openAugSelect(() => {
+      updateHUD(); refreshUnitPanel(); saveGame(); renderAugPanel(panels['aug']);
+    });
+  }
 }
 
 // 단축키
@@ -291,10 +284,19 @@ document.addEventListener('keydown', e => {
   }
 
   // 숫자키 1~9, 0: 전투 중 유닛 스폰 (0 = 10번째)
+  // QWERTYUIOP: 11~20번째 유닛
   if (game.state !== STATE.BATTLE) return;
-  const digit = e.key === '0' ? 10 : parseInt(e.key);
-  if (isNaN(digit) || digit < 1 || digit > 10) return;
-  const unit = game.units[digit - 1];
+  const QROW = ['KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP'];
+  const qIdx = QROW.indexOf(e.code);
+  let unitIdx;
+  if (qIdx !== -1) {
+    unitIdx = 10 + qIdx;
+  } else {
+    const digit = e.key === '0' ? 10 : parseInt(e.key);
+    if (isNaN(digit) || digit < 1 || digit > 10) return;
+    unitIdx = digit - 1;
+  }
+  const unit = game.units[unitIdx];
   if (!unit || unit.spawned) return;
   e.preventDefault();
   document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));

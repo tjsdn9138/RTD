@@ -1,4 +1,5 @@
-import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel, floatGoldGain } from './ui/ui.js';
+import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel } from './ui/ui.js';
+import { initUnitPopup } from './ui/unit-popup.js';
 import { loadGame, deleteSave, saveGame } from './save.js';
 import { initTitleScreen } from './ui/title.js';
 import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL, generateAugWaves } from './game.js';
@@ -199,11 +200,14 @@ document.addEventListener('nextwavestart', () => {
         }
     }
     else {
-        const existList = game.towers.filter(t => t && t.level < MAX_TOWER_LEVEL);
-        if (existList.length > 0) {
-            const tower = existList[Math.floor(Math.random() * existList.length)];
-            levelUpTower(tower);
-            addLevelUpEffect(tower.x, tower.y);
+        const levelUpCnt = Math.max(1, Math.floor(game.waveNumber / 10));
+        for (let i = 0; i < levelUpCnt; i++) {
+            const existList = game.towers.filter(t => t && t.level < MAX_TOWER_LEVEL);
+            if (existList.length > 0) {
+                const tower = existList[Math.floor(Math.random() * existList.length)];
+                levelUpTower(tower);
+                addLevelUpEffect(tower.x, tower.y);
+            }
         }
     }
     saveGame();
@@ -411,10 +415,8 @@ function gameLoop(timestamp) {
     }
 
     if (prevState !== STATE.RESULT && game.state === STATE.RESULT) {
-        const prevGold = game.gold;
         if (game.waveResult === 'CLEAR') dispatchAug('onWaveClear', game.units);
         else dispatchAug('onWaveFail', game.units);
-        floatGoldGain(game.gold - prevGold);
         updateHUD();
         refreshUnitPanel();
     }
@@ -431,6 +433,7 @@ function gameLoop(timestamp) {
 // 타이틀 화면 — 선택 후 게임 초기화
 function startGame(isNew) {
     resizeCanvas();
+    initUnitPopup();
     if (isNew) {
         generateAugWaves();
         initFirstTower();

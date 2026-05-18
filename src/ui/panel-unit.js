@@ -143,7 +143,8 @@ function renderDeploySlots() {
   grid.classList.remove('battle-locked');
   const autoRow = document.getElementById('auto-spawn-row');
   if (autoRow) autoRow.style.display = 'none';
-  for (let i = 0; i < MAX_SLOTS; i++) {
+  const totalSlots = Math.max(game.unitSlots, MAX_SLOTS + game.augSlots);
+  for (let i = 0; i < totalSlots; i++) {
     const div = document.createElement('div');
     div.className = 'deploy-slot';
     div.dataset.idx = i;

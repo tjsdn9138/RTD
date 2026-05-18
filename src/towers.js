@@ -259,8 +259,8 @@ export class PoisonTower extends Tower {
 export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
-        damage: 100, attackSpeed: 1, range: 160,
-        dmgPlus: 10, speedPlus: 0.1, rangePlus: 16,
+        damage: 180, attackSpeed: 1, range: 220,
+        dmgPlus: 20, speedPlus: 0.1, rangePlus: 22,
         passive:     ['전방위', '지상'],
         passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.',
             '비행 유닛을 공격할 수 없습니다.'],
@@ -410,7 +410,7 @@ export class MortarTower extends Tower {
 
 export class SniperTower extends Tower {
     static meta = {
-        name: '저격 타워', rarity: 'HERO',
+        name: '저격 타워', rarity: 'EPIC',
         damage: 1000, attackSpeed: 0.2, range: 400,
         dmgPlus: 100, speedPlus: 0.02, rangePlus: 40,
         passive: '저격',
@@ -466,7 +466,7 @@ export class SniperTower extends Tower {
 
 export class InfernoTower extends Tower {
     static meta = {
-        name: '인페르노 타워', rarity: 'HERO',
+        name: '인페르노 타워', rarity: 'EPIC',
         damage: 50, attackSpeed: 0, range: 300,
         dmgPlus: 5, speedPlus: 0, rangePlus: 30,
         passive: '인페르노',

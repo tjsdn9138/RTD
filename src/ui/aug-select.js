@@ -1,11 +1,12 @@
-import { game } from '../state.js';
-import { RARITY, weightedPick } from '../game.js';
+import { game, addGold } from '../state.js';
+import { RARITY, weightedPick, inventory } from '../game.js';
 import { AUGMENTATION_CLASSES } from '../augmentations.js';
+import { saveGame } from '../save.js';
 
-const SKIP_GOLD = {
-    COMMON: 200, UNCOMMON: 400, RARE: 700, HERO: 1200, LEGEND: 2000,
+const RARITY_WEIGHT = {
+    COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 5, LEGEND: 10,
 };
-const RARITY_ORDER = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
+const SKIP_GOLD_PER_WAVE = 25;
 
 // 모달이 열려있는 동안의 상태
 let _cardsEl    = null;
@@ -14,11 +15,28 @@ let _closeFn    = null;
 let _onDone     = null;
 let _curChoices = [];
 
+function pickOneAug(exclude) {
+    const ownedNames   = new Set(game.augmentations.map(a => a.constructor.name));
+    const exclNames    = new Set(exclude.map(Cls => Cls.name));
+    const exclFamilies = new Set(exclude.map(Cls => Cls.meta.family).filter(Boolean));
+    const isFirst      = game.augmentations.length === 0;
+    let pool = AUGMENTATION_CLASSES.filter(Cls =>
+        !ownedNames.has(Cls.name) &&
+        !exclNames.has(Cls.name) &&
+        (!Cls.meta.family || !exclFamilies.has(Cls.meta.family)) &&
+        (!Cls.meta.firstOnly || isFirst)
+    );
+    if (pool.length === 0)
+        pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
+    return weightedPick(pool);
+}
+
 function pickAugs(exclude = []) {
     const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
     const exclNames  = new Set(exclude.map(Cls => Cls.name));
-    let pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name));
-    if (pool.length < 3) pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name));
+    const isFirst    = game.augmentations.length === 0;
+    let pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
+    if (pool.length < 3) pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
 
     const result = [];
     const pickedFamilies = new Set();
@@ -34,17 +52,13 @@ function pickAugs(exclude = []) {
 }
 
 function getSkipGold(augClasses) {
-    if (!augClasses.length) return 200;
-    const topKey = augClasses.reduce((top, Cls) => {
-        const ri = RARITY_ORDER.indexOf(Cls.meta.rarity);
-        return ri > RARITY_ORDER.indexOf(top) ? Cls.meta.rarity : top;
-    }, 'COMMON');
-    return SKIP_GOLD[topKey] ?? 200;
+    const weightSum = augClasses.reduce((s, Cls) => s + (RARITY_WEIGHT[Cls.meta.rarity] ?? 0), 0);
+    return Math.floor(weightSum * game.waveNumber * SKIP_GOLD_PER_WAVE);
 }
 
 function renderCards(choices) {
     _cardsEl.innerHTML = '';
-    choices.forEach(Cls => {
+    choices.forEach((Cls, idx) => {
         const meta   = Cls.meta;
         const rarity = RARITY[meta.rarity] ?? RARITY.COMMON;
 
@@ -68,6 +82,25 @@ function renderCards(choices) {
             descEl.appendChild(document.createTextNode(line));
         });
 
+        const rerollItem = inventory.find(i => i.type === 'AugReroll');
+        const rerollCount = rerollItem?.count ?? 0;
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'aug-card-refresh' + (rerollCount > 0 ? '' : ' disabled');
+        refreshBtn.textContent = `↺ x${rerollCount}`;
+        refreshBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const item = inventory.find(i => i.type === 'AugReroll' && i.count > 0);
+            if (!item) return;
+            const otherChoices = _curChoices.filter((_, i) => i !== idx);
+            const newAug = pickOneAug(otherChoices);
+            if (!newAug) return;
+            item.count--;
+            _curChoices[idx] = newAug;
+            game.augChoices = _curChoices.map(Cls => Cls.name);
+            saveGame();
+            renderCards(_curChoices);
+        });
+
         card.append(rarEl, nameEl, descEl);
         card.addEventListener('click', () => {
             const aug = new Cls();
@@ -77,24 +110,32 @@ function renderCards(choices) {
             _closeFn();
             done?.();
         });
-        _cardsEl.appendChild(card);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'aug-card-wrap';
+        wrap.append(card, refreshBtn);
+        _cardsEl.appendChild(wrap);
     });
 
     _skipBtn.textContent = `포기하고 ${getSkipGold(choices)}G 받기`;
 }
 
-// 증강 새로고침 아이템에서 호출
-export function rerollAugChoices() {
-    if (!_cardsEl) return;
-    _curChoices = pickAugs(_curChoices);
-    renderCards(_curChoices);
-}
 
 export function openAugSelect(onDone) {
     if (document.getElementById('aug-overlay')) return;
 
-    _onDone     = onDone;
-    _curChoices = pickAugs();
+    _onDone = onDone;
+
+    if (game.augPending && game.augChoices.length > 0) {
+        _curChoices = game.augChoices
+            .map(name => AUGMENTATION_CLASSES.find(Cls => Cls.name === name))
+            .filter(Boolean);
+    } else {
+        game.augPending = true;
+        _curChoices = pickAugs();
+        game.augChoices = _curChoices.map(Cls => Cls.name);
+        saveGame();
+    }
 
     const overlay = document.createElement('div');
     overlay.id = 'aug-overlay';
@@ -116,7 +157,7 @@ export function openAugSelect(onDone) {
     _skipBtn = document.createElement('button');
     _skipBtn.id = 'aug-skip';
     _skipBtn.addEventListener('click', () => {
-        game.gold += getSkipGold(_curChoices);
+        addGold(getSkipGold(_curChoices));
         const done = _onDone;
         _closeFn();
         done?.();
@@ -137,6 +178,8 @@ export function openAugSelect(onDone) {
     document.addEventListener('keydown', onKey, true);
 
     _closeFn = () => {
+        game.augPending = false;
+        game.augChoices = [];
         document.removeEventListener('keydown', onKey, true);
         overlay.remove();
         _cardsEl    = null;

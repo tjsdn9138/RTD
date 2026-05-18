@@ -82,7 +82,7 @@ function renderGrid(grid, detail) {
             card.innerHTML = `
                 <div class="ulist-card-ico" style="background:${m.color};"></div>
                 <div class="ulist-card-name">${m.name}</div>
-                <div class="ulist-card-lv">Lv.${m.level}</div>
+                <div class="ulist-card-lv" style="color:${RARITY[m.rarity]?.color ?? '#4a4a4a'};">Lv.${m.level}</div>
                 ${canLevelUp ? '<div class="ulist-card-lvup-badge"></div>' : ''}
             `;
             card.addEventListener('click', () => {

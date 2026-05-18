@@ -1,6 +1,16 @@
 import { game, checkWaveEnd } from './state.js';
 import { dispatchAug } from './augmentations.js';
 
+function _notifyUnit(unit, type) {
+    document.dispatchEvent(new CustomEvent('unit-event', {
+        detail: {
+            name: unit.constructor.meta?.name ?? unit.constructor.name,
+            color: unit.color,
+            type,
+        },
+    }));
+}
+
 // 16진수 hex → rgba 문자열 (이펙트가 unit color와 자동 동기화되도록)
 function hexToRgba(hex, alpha) {
     const n = parseInt(hex.slice(1), 16);
@@ -75,6 +85,7 @@ export class Unit {
             if (this.waypointIndex >= this.waypoints.length) {
                 this.active = false;
                 game.survivedCount++;
+                if (!this.isSplit) _notifyUnit(this, 'survive');
                 dispatchAug('onUnitSurvive', this);
                 checkWaveEnd();
             }
@@ -109,6 +120,7 @@ export class Unit {
             this.alive  = false;
             this.active = false;
             game.deadCount++;
+            if (!this.isSplit) _notifyUnit(this, 'death');
             dispatchAug('onUnitDeath', this, units);
             checkWaveEnd();
         }
@@ -530,7 +542,7 @@ export class TiredUnit extends Unit {
 
 export class InvisibleUnit extends Unit {
     static meta = {
-        type: 'InvisibleUnit', name: '투명한넘', rarity: 'HERO',
+        type: 'InvisibleUnit', name: '투명한넘', rarity: 'EPIC',
         color: '#aab7b8',
         hp: 350, speed: 250, level: 1,
         hpPlus: 55, speedPlus: 30, timePlus: 0.5,
@@ -578,7 +590,7 @@ export class InvisibleUnit extends Unit {
 
 export class SplitUnit extends Unit {
     static meta = {
-        type: 'SplitUnit', name: '분열하는넘', rarity: 'HERO',
+        type: 'SplitUnit', name: '분열하는넘', rarity: 'EPIC',
         color: '#cd6155',
         hp: 700, speed: 120, level: 1,
         hpPlus: 95, speedPlus: 15, splitPlus: 1,
@@ -603,6 +615,7 @@ export class SplitUnit extends Unit {
             this.alive  = false;
             this.active = false;
             game.deadCount++;
+            _notifyUnit(this, 'death');
             shatterEffects.push({
                 x: this.x, y: this.y,
                 timer: 0, duration: 0.5,
@@ -716,7 +729,7 @@ export class SplitUnit extends Unit {
 
 export class DashUnit extends Unit {
     static meta = {
-        type: 'DashUnit', name: '돌진하는넘', rarity: 'HERO',
+        type: 'DashUnit', name: '돌진하는넘', rarity: 'EPIC',
         color: '#f39c12',
         hp: 400, speed: 200, level: 1,
         hpPlus: 65, speedPlus: 30, dashMinus: 0.5,
@@ -796,6 +809,7 @@ export class DashUnit extends Unit {
             if (this.waypointIndex >= this.waypoints.length) {
                 this.active = false;
                 game.survivedCount++;
+                _notifyUnit(this, 'survive');
                 dispatchAug('onUnitSurvive', this);
                 checkWaveEnd();
             }

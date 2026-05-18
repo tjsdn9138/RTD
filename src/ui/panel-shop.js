@@ -38,21 +38,12 @@ function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
     btn10.className = 'shop-btn';
 
     const updateBtn = () => {
-        const cost         = getGachaCost(kind);
-        const count        = inventory.find(i => i.type === ticketType)?.count ?? 0;
-        const ticketsToUse = Math.min(count, 10);
-        // 티켓은 gachaPulls를 증가시키지 않으므로, 시작점은 ticketsToUse 오프셋 없이 현재 gachaPulls
-        const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind], 10 - ticketsToUse);
+        const cost  = getGachaCost(kind);
+        const count = inventory.find(i => i.type === ticketType)?.count ?? 0;
+        const goldNeeded = getGachaCostRange(kind, game.gachaPulls[kind], 10);
 
-        btn1.innerHTML = count > 0 ? `🎫 1 / ${count}` : `🪙 ${cost}`;
-
-        if (count >= 10) {
-            btn10.innerHTML = `🎫 × 10`;
-        } else if (count > 0) {
-            btn10.innerHTML = `🎫 ${count} + 🪙 ${goldNeeded}`;
-        } else {
-            btn10.innerHTML = `🪙 ${goldNeeded}`;
-        }
+        btn1.innerHTML  = count > 0   ? `🎫 1 / ${count}` : `🪙 ${cost}`;
+        btn10.innerHTML = count >= 10 ? `🎫 × 10`         : `🪙 ${goldNeeded}`;
     };
     allUpdateBtns.push(updateBtn);
     updateBtn();
@@ -88,18 +79,7 @@ function makeGachaSection(title, ticketType, kind, allUpdateBtns) {
     return section;
 }
 
-function doGacha(kind) {
-    const ticketType = kind === 'unit' ? 'UnitGachaTicket' : 'ItemGachaTicket';
-    const ticket = inventory.find(i => i.type === ticketType && i.count > 0);
-    if (ticket) {
-        ticket.count--;
-    } else {
-        const cost = getGachaCost(kind);
-        if (game.gold < cost) return null;
-        game.gold -= cost;
-        game.gachaPulls[kind]++;
-    }
-
+function applyPullReward(kind) {
     const classes = kind === 'unit' ? UNIT_CLASSES : ITEM_CLASSES;
     const Cls = weightedPick(classes);
     if (!Cls) return null;
@@ -112,10 +92,12 @@ function doGacha(kind) {
         let amount = 1;
         if (invType === 'UnitGachaTicket') {
             if      (Cls.meta.rarity === 'LEGEND') amount = 20;
-            else if (Cls.meta.rarity === 'HERO')   amount = 10;
+            else if (Cls.meta.rarity === 'EPIC')   amount = 10;
         } else if (invType === 'ItemGachaTicket') {
             if      (Cls.meta.rarity === 'LEGEND') amount = 5;
-            else if (Cls.meta.rarity === 'HERO')   amount = 3;
+            else if (Cls.meta.rarity === 'EPIC')   amount = 3;
+        } else if (invType === 'AugReroll') {
+            if (Cls.meta.rarity === 'EPIC') amount = 2;
         }
         const inv = inventory.find(i => i.type === invType);
         if (inv) { inv.count += amount; inv.owned = true; }
@@ -125,20 +107,35 @@ function doGacha(kind) {
     return Cls.meta;
 }
 
+function doGacha(kind) {
+    const ticketType = kind === 'unit' ? 'UnitGachaTicket' : 'ItemGachaTicket';
+    const ticket = inventory.find(i => i.type === ticketType && i.count > 0);
+    if (ticket) {
+        ticket.count--;
+    } else {
+        const cost = getGachaCost(kind);
+        if (game.gold < cost) return null;
+        game.gold -= cost;
+        game.gachaPulls[kind]++;
+    }
+    return applyPullReward(kind);
+}
+
 function doGacha10(kind) {
     const ticketType = kind === 'unit' ? 'UnitGachaTicket' : 'ItemGachaTicket';
     const ticket = inventory.find(i => i.type === ticketType);
-    const ticketCount  = ticket?.count ?? 0;
-    const ticketsToUse = Math.min(ticketCount, 10);
-    const goldNeeded   = getGachaCostRange(kind, game.gachaPulls[kind], 10 - ticketsToUse);
+    const ticketCount = ticket?.count ?? 0;
 
-    if (game.gold < goldNeeded) return null;
-
-    const results = [];
-    for (let i = 0; i < 10; i++) {
-        const result = doGacha(kind);
-        if (result) results.push(result);
+    if (ticketCount >= 10) {
+        ticket.count -= 10;
+    } else {
+        const goldNeeded = getGachaCostRange(kind, game.gachaPulls[kind], 10);
+        if (game.gold < goldNeeded) return null;
+        game.gold -= goldNeeded;
+        game.gachaPulls[kind] += 10;
     }
+
+    const results = Array.from({ length: 10 }, () => applyPullReward(kind)).filter(Boolean);
     return results.length > 0 ? results : null;
 }
 

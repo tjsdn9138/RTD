@@ -1,4 +1,4 @@
-import { game, getReward } from './state.js';
+import { game, getReward, addGold } from './state.js';
 
 export function dispatchAug(hook, ...args) {
     game.augmentations.forEach(aug => aug[hook](...args));
@@ -40,11 +40,11 @@ export class AutoOnlyAug extends Augmentation {
     static meta = {
         name: 'AI의 반란',
         rarity: 'COMMON',
-        desc: '수동 출전이 불가능해지는 대신 골드를 1000 받습니다.',
-        gold: 1000, // TODO: 수치조정
+        desc: '수동 출전이 불가능해지는 대신 골드를 3000 받습니다.',
+        gold: 3000, // TODO: 수치조정
     }
     onAcquire() {
-        game.gold += AutoOnlyAug.meta.gold;
+        addGold(AutoOnlyAug.meta.gold);
     }
     onWaveStart(units) {
         game.manualSpawnDisabled = true;
@@ -57,11 +57,12 @@ export class TooManyIAug extends Augmentation {
         name: '인해전술 I',
         rarity: 'UNCOMMON',
         family: '인해전술',
-        desc: '유닛 슬롯이 1개 증가하는 대신 유닛의 받는 피해량이 15% 증가합니다.',
-        slots: 1, dmgTakenBonus: 15,
+        desc: '유닛 슬롯이 1개 증가하는 대신 유닛의 받는 피해량이 5% 증가합니다.',
+        slots: 1, dmgTakenBonus: 5,
     }
     onAcquire() {
         game.unitSlots += TooManyIAug.meta.slots;
+        game.augSlots  += TooManyIAug.meta.slots;
         game.damageTakenBonus += TooManyIAug.meta.dmgTakenBonus;
     }
 }
@@ -115,11 +116,12 @@ export class TooManyIIAug extends Augmentation {
         name: '인해전술 II',
         rarity: 'RARE',
         family: '인해전술',
-        desc: '유닛 슬롯이 2개 증가하는 대신 유닛의 받는 피해량이 20% 증가합니다.',
-        slots: 2, dmgTakenBonus: 20,
+        desc: '유닛 슬롯이 2개 증가하는 대신 유닛의 받는 피해량이 10% 증가합니다.',
+        slots: 2, dmgTakenBonus: 10,
     }
     onAcquire() {
         game.unitSlots += TooManyIIAug.meta.slots;
+        game.augSlots  += TooManyIIAug.meta.slots;
         game.damageTakenBonus += TooManyIIAug.meta.dmgTakenBonus;
     }
 }
@@ -175,13 +177,14 @@ export class GoldGoblinIIAug extends Augmentation {
 export class TooManyIIIAug extends Augmentation {
     static meta = {
         name: '인해전술 III',
-        rarity: 'HERO',
+        rarity: 'EPIC',
         family: '인해전술',
-        desc: '유닛 슬롯이 3개 증가하는 대신 유닛의 받는 피해량이 25% 증가합니다.',
-        slots: 3, dmgTakenBonus: 25,
+        desc: '유닛 슬롯이 3개 증가하는 대신 유닛의 받는 피해량이 15% 증가합니다.',
+        slots: 3, dmgTakenBonus: 15,
     }
     onAcquire() {
         game.unitSlots += TooManyIIIAug.meta.slots;
+        game.augSlots  += TooManyIIIAug.meta.slots;
         game.damageTakenBonus += TooManyIIIAug.meta.dmgTakenBonus;
     }
 }
@@ -189,7 +192,7 @@ export class TooManyIIIAug extends Augmentation {
 export class BarrierAug extends Augmentation {
     static meta = {
         name: '주문 보호막',
-        rarity: 'HERO',
+        rarity: 'EPIC',
         desc: '유닛 전체가 피해를 한번 막을 수 있는 보호막을 가지고 웨이브를 시작합니다.',
     }
     onWaveStart(units) {
@@ -217,10 +220,10 @@ function shadowPosAt(waypoints, targetDist) {
 export class ShadowIAug extends Augmentation {
     static meta = {
         name: '그림자분신 I',
-        rarity: 'HERO',
+        rarity: 'EPIC',
         family: '그림자분신',
-        desc: '모든 유닛이 체력의 60%를 가진 분신 2마리로 생성됩니다.',
-        clones: 2, hpFactor: 0.6,
+        desc: '모든 유닛이 체력의 40%를 가진 분신 2마리로 생성됩니다.',
+        clones: 2, hpFactor: 0.4,
     }
     onUnitSpawn(unit, units, waypoints) {
         const { clones, hpFactor } = ShadowIAug.meta;
@@ -240,8 +243,9 @@ export class ShadowIAug extends Augmentation {
 export class SoloLevelingAug extends Augmentation {
     static meta = {
         name: '나 혼자만 레벨업',
-        rarity: 'HERO',
+        rarity: 'EPIC',
         desc: '5웨이브 동안 유닛을 하나만 출전할 수 있습니다.\n대신 배치하는 유닛의 능력치가 크게 상승하며, 클리어 시 보상이 증가합니다.',
+        firstOnly: true,
     }
     constructor() {
         super();
@@ -264,7 +268,7 @@ export class SoloLevelingAug extends Augmentation {
     }
     onWaveClear(units) {
         if (this.wavesRemaining <= 0) return;
-        game.gold += getReward() * 2;
+        addGold(getReward() * 2);
         this.wavesRemaining--;
         if (this.wavesRemaining === 0 && this.originalUnitSlots !== null) {
             game.unitSlots = this.originalUnitSlots;
@@ -288,7 +292,7 @@ export class SoloLevelingAug extends Augmentation {
 export class AdaptIIAug extends Augmentation {
     static meta = {
         name: '적응 II',
-        rarity: 'HERO',
+        rarity: 'EPIC',
         family: '적응',
         desc: '유닛이 같은 타워에 연속으로 피격 시 받는 피해량이 6% 감소합니다. (최대 30%)',
     }
@@ -305,11 +309,12 @@ export class TooManyIVAug extends Augmentation {
         name: '인해전술 IV',
         rarity: 'LEGEND',
         family: '인해전술',
-        desc: '유닛 슬롯이 4개 증가하는 대신 유닛의 받는 피해량이 30% 증가합니다.',
-        slots: 4, dmgTakenBonus: 30,
+        desc: '유닛 슬롯이 4개 증가하는 대신 유닛의 받는 피해량이 20% 증가합니다.',
+        slots: 4, dmgTakenBonus: 20,
     }
     onAcquire() {
         game.unitSlots += TooManyIVAug.meta.slots;
+        game.augSlots  += TooManyIVAug.meta.slots;
         game.damageTakenBonus += TooManyIVAug.meta.dmgTakenBonus;
     }
 }
@@ -330,8 +335,8 @@ export class ShadowIIAug extends Augmentation {
         name: '그림자분신 II',
         rarity: 'LEGEND',
         family: '그림자분신',
-        desc: '모든 유닛이 체력의 50%를 가진 분신 3마리로 생성됩니다.',
-        clones: 3, hpFactor: 0.5,
+        desc: '모든 유닛이 체력의 30%를 가진 분신 3마리로 생성됩니다.',
+        clones: 3, hpFactor: 0.3,
     }
     onUnitSpawn(unit, units, waypoints) {
         const { clones, hpFactor } = ShadowIIAug.meta;

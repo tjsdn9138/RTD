@@ -8,11 +8,11 @@ import { MAX_UNIT_LEVEL, MAX_TOWER_LEVEL, MAX_SLOTS, game, getLevelUpCost } from
 // 희귀도 정보
 // TODO: 확률 조정
 export const RARITY = {
-    COMMON:   { name: '일반', color: '#4a4a4a', prob: 55 },
-    UNCOMMON: { name: '고급', color: '#2a8a00', prob: 25 },
-    RARE:     { name: '희귀', color: '#0a2aaa', prob: 12 },
-    HERO:     { name: '영웅', color: '#6a0aaa', prob: 6  },
-    LEGEND:   { name: '전설', color: '#c87800', prob: 2  },
+    COMMON:    { name: '일반', color: '#4a4a4a', prob: 40 },
+    UNCOMMON:  { name: '고급', color: '#2a8a00', prob: 28 },
+    RARE:      { name: '희귀', color: '#0a2aaa', prob: 18 },
+    EPIC:      { name: '영웅', color: '#6a0aaa', prob: 10 },
+    LEGEND:    { name: '전설', color: '#c87800', prob: 4  },
     UNDEFINED: { name: '고유', color: '#00a8a8', prob: 0  },
 };
 
@@ -23,8 +23,8 @@ export function getGachaCost(kind) {
 }
 
 function getGachaCostAt(kind, pulls) {
-    if (kind === 'unit') return (Math.floor(pulls / 20) + 1) * 25;
-    if (kind === 'item') return (Math.floor(pulls / 20) + 1) * 100;
+    if (kind === 'unit') return 25 + Math.floor(pulls / 10) * 5;
+    if (kind === 'item') return 100 + Math.floor(pulls / 10) * 20;
     return 0;
 }
 
@@ -68,15 +68,15 @@ export const inventory = ITEM_CLASSES.map(Cls => ({
 }));
 
 // 시작 아이템 개수 설정
-const _startItems = ['TutorialBook'];
-_startItems.forEach(type => {
+const _startItems = [['TutorialBook', 1], ['AugReroll', 3]];
+_startItems.forEach(([type, count]) => {
     const i = inventory.find(i => i.type === type);
-    i.count = 1;
+    i.count = count;
     i.owned = true;
 });
 
 // 출전 유닛 슬롯 — null이면 비어있음
-export const deploySlots = Array(MAX_SLOTS).fill(null);
+export const deploySlots = Array(20).fill(null);
 
 // 타워 레벨업
 export function levelUpTower(tower) {
@@ -169,7 +169,7 @@ export function checkItemLevelUp(type) {
 
 // 희귀도 가중치 기반 랜덤 픽
 export function weightedPick(classes) {
-    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
+    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGEND'];
     const tiers = rarities
         .map(r => ({ rarity: r, prob: RARITY[r].prob, candidates: classes.filter(Cls => Cls.meta.rarity === r) }))
         .filter(t => t.candidates.length > 0);
@@ -187,7 +187,7 @@ export function weightedPick(classes) {
 // 지정 등급의 타워 중 중복 제외 랜덤 타워 선택
 // rarities[5]='UNDEFINED'는 만능 타워(특수 milestone, 예: wave 50) 전용 풀
 export function selectTower(rarityNum) {
-    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND', 'UNDEFINED'];
+    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGEND', 'UNDEFINED'];
     if (rarityNum < 0 || rarityNum >= rarities.length) return null;
     const existing = new Set(game.towers.filter(t => t).map(t => t.constructor.name));
     const candidates = TOWER_CLASSES.filter(t =>
@@ -201,7 +201,7 @@ export function selectTower(rarityNum) {
 // rarityNum(0=COMMON~4=LEGEND) 이하 등급의 타워 중 중복 제외 랜덤 타워 선택
 // UNDEFINED는 일반 풀에서 제외 (selectTower의 milestone에서만 등장)
 export function selectRandomTower(rarityNum) {
-    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'HERO', 'LEGEND'];
+    const rarities = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGEND'];
     if (rarityNum < 0 || rarityNum >= rarities.length) return null;
     const existing = new Set(game.towers.filter(t => t).map(t => t.constructor.name));
     const candidates = TOWER_CLASSES.filter(t => {

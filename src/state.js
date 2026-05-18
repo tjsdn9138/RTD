@@ -32,11 +32,14 @@ export const game = {
     augmentations: [],
     damageTakenBonus: 0,
     augWaves: [],
+    augPending: false,
+    augChoices: [],
+    augSlots: 0,
 };
 
 export const MAX_SLOTS       = 10; // 유닛 최대 개수
 export const MAX_UNIT_LEVEL  = 20; // 유닛 최대 레벨
-export const MAX_TOWER_LEVEL = 15; // 타워 최대 레벨
+export const MAX_TOWER_LEVEL = 20; // 타워 최대 레벨
 export const MAX_WAVES       = 50; // 총 웨이브 수
 
 // 유닛 슬롯 추가 가격 계산 — n*(n+1)/2 * 100 (n = 다음 구매 횟수)
@@ -58,7 +61,7 @@ export function getLevelUpCost(level) {
 // 유닛 슬롯 추가
 export function buySlot() {
     const cost = getSlotCost();
-    if (game.gold < cost || game.unitSlots >= MAX_SLOTS) return null;
+    if (game.gold < cost || game.unitSlots >= MAX_SLOTS + game.augSlots) return null;
     game.gold -= cost;
     game.unitSlots++;
     game.boughtSlots++;
@@ -68,9 +71,9 @@ export function buySlot() {
 // 웨이브 클리어 보상 계산
 // TODO: 수치 조정
 export function getReward() {
-    const defaultReward = game.waveNumber * 50;
+    const defaultReward = game.waveNumber * 100;
     const extraReward = game.survivedCount > 1 ?
-        (game.survivedCount - 1) * (defaultReward / 5) : 0
+        (game.survivedCount - 1) * (defaultReward / 4) : 0
     const bonus = game.goldBonus || 0;
     return Math.floor(defaultReward + extraReward + bonus);
 }
@@ -112,7 +115,7 @@ export function getFailReward() {
 // 목숨 감소 — 0이 되면 게임 오버
 export function loseLife() {
     game.lives--;
-    game.gold += getFailReward();
+    addGold(getFailReward());
     if (game.lives <= 0) {
         game.lives  = 0;
         game.state  = STATE.GAMEOVER;
@@ -131,7 +134,7 @@ export function retryWave() {
 export function nextWave() {
     game.towers.forEach(t => { if (t) t.stopped = false; });
     game.pendingItem = null;
-    game.gold        += getReward();
+    addGold(getReward());
     game.waveNumber++;
     game.waveResult  = null;
     game.state       = STATE.READY;
@@ -141,6 +144,13 @@ export function nextWave() {
 export function gameWin() {
     game.pendingItem = null;
     game.state       = STATE.GAMECLEAR;
+}
+
+// gold 증가 — 자동 애니메이션 이벤트 발생
+export function addGold(amount) {
+    if (amount <= 0) return;
+    game.gold += amount;
+    document.dispatchEvent(new CustomEvent('goldgain', { detail: amount }));
 }
 
 // 게임 시작 시 전체 증강 웨이브 미리 생성 (6~9, 16~19, 26~29 ...)

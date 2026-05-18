@@ -64,8 +64,11 @@ export function saveGame() {
         }])),
 
         damageTakenBonus: game.damageTakenBonus,
+        augSlots: game.augSlots,
         manualSpawnDisabled: game.manualSpawnDisabled,
         augWaves: game.augWaves,
+        augPending: game.augPending,
+        augChoices: game.augChoices,
         augmentations: game.augmentations.map(aug => {
             const entry = { name: aug.constructor.name };
             if (aug.done             !== undefined) entry.done             = aug.done;
@@ -93,7 +96,10 @@ export function loadGame() {
         game.boughtSlots = data.boughtSlots ?? 0;
         game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
         game.damageTakenBonus = data.damageTakenBonus ?? 0;
-        game.augWaves = data.augWaves ?? [];
+        game.augSlots         = data.augSlots ?? 0;
+        game.augWaves   = data.augWaves ?? [];
+        game.augPending = data.augPending ?? false;
+        game.augChoices = data.augChoices ?? [];
         game.augmentations = (data.augmentations ?? []).map(entry => {
             const name = typeof entry === 'string' ? entry : entry.name;
             const Cls = AUGMENTATION_CLASS[name];
