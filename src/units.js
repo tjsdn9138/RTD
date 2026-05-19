@@ -33,6 +33,11 @@ export class Unit {
         this.isPoisoned      = false;
         this.poisonTimer     = 0;
         this.poisonDps       = 0;
+        this.isSlowed        = false;
+        this.slowTimer       = 0;
+        this.slowFactor      = 0;
+        this.isStunned       = false;
+        this.stunTimer       = 0;
         this.damageReduction  = 0;
         this.distanceTraveled = 0;
     }
@@ -70,12 +75,31 @@ export class Unit {
             }
         }
 
+        if (this.isSlowed) {
+            this.slowTimer -= deltaTime / 1000;
+            if (this.slowTimer <= 0) {
+                this.isSlowed   = false;
+                this.slowTimer  = 0;
+                this.slowFactor = 0;
+            }
+        }
+
+        if (this.isStunned) {
+            this.stunTimer -= deltaTime / 1000;
+            if (this.stunTimer <= 0) {
+                this.isStunned = false;
+                this.stunTimer = 0;
+            } else {
+                return; // 기절 중엔 이동 불가
+            }
+        }
+
         const target = this.waypoints[this.waypointIndex]; // 다음 웨이포인트
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy); // 타겟까지의 거리
 
-        const moveAmount = this.speed * (deltaTime / 1000);
+        const moveAmount = this.speed * (1 - this.slowFactor / 100) * (deltaTime / 1000);
 
         if (distance <= moveAmount) {
             this.distanceTraveled += distance;
@@ -86,7 +110,7 @@ export class Unit {
                 this.active = false;
                 game.survivedCount++;
                 if (!this.isSplit) _notifyUnit(this, 'survive');
-                dispatchAug('onUnitSurvive', this);
+                dispatchAug('onUnitSurvive', this, units);
                 checkWaveEnd();
             }
             return;
@@ -151,6 +175,26 @@ export class Unit {
             ctx.stroke();
         }
 
+        // 슬로우 상태 외곽 글로우
+        if (this.isSlowed) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 150);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(93, 173, 226, ${0.5 + 0.4 * pulse})`;
+            ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
+
+        // 기절 상태 외곽 글로우
+        if (this.isStunned) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 80);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(243, 156, 18, ${0.7 + 0.3 * pulse})`;
+            ctx.lineWidth   = 3;
+            ctx.stroke();
+        }
+
         this._drawBody(ctx);
 
         if (this.shield) {
@@ -186,6 +230,21 @@ export class Unit {
             ctx.beginPath();
             ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
+            ctx.fill();
+        }
+
+        if (this.isSlowed) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 150);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(93, 173, 226, ${0.18 + 0.12 * pulse})`;
+            ctx.fill();
+        }
+
+        if (this.isStunned) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(243, 156, 18, 0.3)';
             ctx.fill();
         }
     }
@@ -335,7 +394,7 @@ export class HealUnit extends Unit {
             }
         }
         if (target) {
-            const amount      = target.isPoisoned ? this.heal * 0.5 : this.heal;
+            const amount      = (target.isPoisoned ? this.heal * 0.5 : this.heal) * (target.healBonus ?? 1);
             target.hp         = Math.min(target.maxHp, target.hp + amount);
             target.healFlash  = 1;
         }
@@ -649,6 +708,11 @@ export class SplitUnit extends Unit {
             child.isPoisoned       = this.isPoisoned;
             child.poisonDps        = this.poisonDps;
             child.poisonTimer      = this.poisonTimer;
+            child.isSlowed         = this.isSlowed;
+            child.slowTimer        = this.slowTimer;
+            child.slowFactor       = this.slowFactor;
+            child.isStunned        = this.isStunned;
+            child.stunTimer        = this.stunTimer;
 
             const targetDist       = Math.max(0, this.distanceTraveled - i * GAP);
             const pos              = SplitUnit._posAt(this.waypoints, targetDist);
@@ -691,6 +755,21 @@ export class SplitUnit extends Unit {
             ctx.fillStyle = `rgba(125, 186, 0, ${0.18 + 0.12 * pulse})`;
             ctx.fill();
         }
+
+        if (this.isSlowed) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 150);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 9, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(93, 173, 226, ${0.18 + 0.12 * pulse})`;
+            ctx.fill();
+        }
+
+        if (this.isStunned) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 9, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(243, 156, 18, 0.3)';
+            ctx.fill();
+        }
     }
 
     draw(ctx) {
@@ -713,6 +792,24 @@ export class SplitUnit extends Unit {
             ctx.arc(this.x, this.y, 11, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(125, 186, 0, ${0.5 + 0.4 * pulse})`;
             ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
+
+        if (this.isSlowed) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 150);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 13, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(93, 173, 226, ${0.5 + 0.4 * pulse})`;
+            ctx.lineWidth   = 2;
+            ctx.stroke();
+        }
+
+        if (this.isStunned) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 80);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 13, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(243, 156, 18, ${0.7 + 0.3 * pulse})`;
+            ctx.lineWidth   = 2.5;
             ctx.stroke();
         }
 
@@ -776,6 +873,29 @@ export class DashUnit extends Unit {
             }
         }
 
+        if (this.isSlowed) {
+            this.slowTimer -= dt;
+            if (this.slowTimer <= 0) {
+                this.isSlowed   = false;
+                this.slowTimer  = 0;
+                this.slowFactor = 0;
+            }
+        }
+
+        // 기절: 돌진 중엔 면역, 비돌진 상태면 이동 불가
+        if (this.isStunned && !this.isDashing) {
+            this.stunTimer -= dt;
+            if (this.stunTimer <= 0) {
+                this.isStunned = false;
+                this.stunTimer = 0;
+            } else {
+                return;
+            }
+        } else if (this.isStunned) {
+            this.stunTimer -= dt;
+            if (this.stunTimer <= 0) { this.isStunned = false; this.stunTimer = 0; }
+        }
+
         // 돌진 상태 관리
         if (this.isDashing) {
             this.dashElapsed += dt;
@@ -793,8 +913,8 @@ export class DashUnit extends Unit {
             }
         }
 
-        // 이동 (돌진 중엔 고속)
-        const moveSpeed  = this.isDashing ? DashUnit.DASH_SPEED : this.speed;
+        // 이동 (돌진 중엔 고속, 슬로우는 비돌진 상태에만 적용)
+        const moveSpeed  = this.isDashing ? DashUnit.DASH_SPEED : this.speed * (1 - this.slowFactor / 100);
         const wp         = this.waypoints[this.waypointIndex];
         const dx         = wp.x - this.x;
         const dy         = wp.y - this.y;
@@ -810,7 +930,7 @@ export class DashUnit extends Unit {
                 this.active = false;
                 game.survivedCount++;
                 _notifyUnit(this, 'survive');
-                dispatchAug('onUnitSurvive', this);
+                dispatchAug('onUnitSurvive', this, units);
                 checkWaveEnd();
             }
             return;

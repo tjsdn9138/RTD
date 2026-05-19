@@ -149,14 +149,16 @@ export function gameWin() {
 // gold 증가 — 자동 애니메이션 이벤트 발생
 export function addGold(amount) {
     if (amount <= 0) return;
-    game.gold += amount;
-    document.dispatchEvent(new CustomEvent('goldgain', { detail: amount }));
+    const actual = Math.floor(amount * (1 + game.goldBonus / 100));
+    game.gold += actual;
+    document.dispatchEvent(new CustomEvent('goldgain', { detail: actual }));
 }
 
-// 게임 시작 시 전체 증강 웨이브 미리 생성 (6~9, 16~19, 26~29 ...)
+// 게임 시작 시 전체 증강 웨이브 미리 생성
+// wave 6부터 5웨이브 단위로 1개 랜덤 선택 (시작점이 항상 5의 배수+1이므로 +0~3 범위는 자동으로 타워 추가 웨이브 제외)
 export function generateAugWaves() {
     game.augWaves = [];
-    for (let k = 1; k * 10 - 4 <= MAX_WAVES; k++) {
-        game.augWaves.push(k * 10 - 4 + Math.floor(Math.random() * 4));
+    for (let start = 6; start < MAX_WAVES; start += 5) {
+        game.augWaves.push(start + Math.floor(Math.random() * 4));
     }
 }

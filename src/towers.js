@@ -203,7 +203,7 @@ export class InfraredTower extends Tower {
         damage: 300, attackSpeed: 0.8, range: 240,
         dmgPlus: 30, speedPlus: 0.08, rangePlus: 24,
         passive: '적외선',
-        passiveDesc: '은신한 유닛 공격 가능 및 은신한 유닛 우선 공격',
+        passiveDesc: '은신한 유닛을 공격할 수 있고, 은신한 유닛을 우선 공격합니다.',
     };
     constructor(x, y) {
         super(x, y);
@@ -224,35 +224,81 @@ export class InfraredTower extends Tower {
     }
 }
 
-export class PoisonTower extends Tower {
+export class SlowTower extends Tower {
     static meta = {
-        name: '독 타워', rarity: 'UNCOMMON',
-        damage: 60, attackSpeed: 1.2, range: 240,
-        dmgPlus: 8, speedPlus: 0.12, rangePlus: 24,
-        passive: ['독', '지상'], poisonTime: 3,
-        passiveDesc: [(time) => `${time}초에 걸쳐 도트 데미지를 받습니다.\n독에 걸린 유닛은 받는 회복량이 50% 감소됩니다.`,
-            '비행 유닛을 공격할 수 없습니다.'],
+        name: '슬로우 타워', rarity: 'UNCOMMON',
+        damage: 120, attackSpeed: 1.5, range: 240,
+        dmgPlus: 15, speedPlus: 0.15, rangePlus: 24,
+        passive: '슬로우', slow: 30,
+        passiveDesc: (slow) => `피격 받은 유닛의 속도를 1.5초 동안 ${slow}% 감소시킵니다.\n슬로우가 없는 유닛을 우선 공격합니다.`,
     };
     constructor(x, y) {
         super(x, y);
-        this.damage      = PoisonTower.meta.damage;
-        this.range       = PoisonTower.meta.range;
-        this.attackSpeed = PoisonTower.meta.attackSpeed;
-        this.color       = '#7dba00';
+        this.damage      = SlowTower.meta.damage;
+        this.range       = SlowTower.meta.range;
+        this.attackSpeed = SlowTower.meta.attackSpeed;
+        this.color       = '#5dade2';
     }
 
     update(deltaTime, units) {
         if (!this._tickReady(deltaTime)) return;
-        const target = this._selectTarget(units, { skipFlying: true, prefer: u => !u.isPoisoned });
+        const target = this._selectTarget(units, { prefer: u => !u.isSlowed });
         if (target) {
-            const dmg = this.getDamage(target);
-            target.takeDamage(dmg, units, this);
-            target.isPoisoned  = true;
-            target.poisonTimer = PoisonTower.meta.poisonTime;
-            target.poisonDps   = dmg;
+            target.takeDamage(this.getDamage(target), units, this);
+            target.isSlowed   = true;
+            target.slowTimer  = 1.5;
+            target.slowFactor = SlowTower.meta.slow;
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
+    }
+}
+
+export class StunTower extends Tower {
+    static meta = {
+        name: '기절 타워', rarity: 'UNCOMMON',
+        damage: 80, attackSpeed: 1.3, range: 240,
+        dmgPlus: 10, speedPlus: 0.13, rangePlus: 24,
+        passive: ['일타쌍피', '기절'],
+        passiveDesc: ['공격 시 두 명의 유닛을 동시에 공격합니다.',
+            '피격 받은 유닛을 잠깐 동안 멈춥니다.'],
+    };
+    constructor(x, y) {
+        super(x, y);
+        this.damage      = StunTower.meta.damage;
+        this.range       = StunTower.meta.range;
+        this.attackSpeed = StunTower.meta.attackSpeed;
+        this.color       = '#e91e63';
+    }
+
+    // 도발 우선 + 진행도 상위 2명 선택
+    _selectTwoTargets(units) {
+        const inRange = units.filter(u => {
+            if (!u.active || !u.alive) return false;
+            if (u.isInvisible) return false;
+            return this.getDistance(u) <= this.range;
+        });
+
+        const taunting = inRange.filter(u => u.taunting);
+        const pool = taunting.length > 0 ? taunting : inRange.filter(u => !u.taunting);
+        pool.sort((a, b) => this.getProgress(b) - this.getProgress(a));
+
+        return [pool[0] ?? null, pool[1] ?? null];
+    }
+
+    _applyStun(target, units) {
+        target.takeDamage(this.getDamage(target), units, this);
+        target.isStunned = true;
+        target.stunTimer = 0.1;
+        attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+    }
+
+    update(deltaTime, units) {
+        if (!this._tickReady(deltaTime)) return;
+        const [t1, t2] = this._selectTwoTargets(units);
+        if (t1) this._applyStun(t1, units);
+        if (t2) this._applyStun(t2, units);
+        this._consumeTick(!!(t1 || t2));
     }
 }
 
@@ -464,6 +510,38 @@ export class SniperTower extends Tower {
     }
 }
 
+export class PoisonTower extends Tower {
+    static meta = {
+        name: '독 타워', rarity: 'EPIC',
+        damage: 60, attackSpeed: 1.2, range: 240,
+        dmgPlus: 8, speedPlus: 0.12, rangePlus: 24,
+        passive: ['독', '지상'], poisonTime: 3,
+        passiveDesc: [(time) => `${time}초에 걸쳐 도트 데미지를 받습니다.\n독에 걸린 유닛은 받는 회복량이 50% 감소됩니다.`,
+            '비행 유닛을 공격할 수 없습니다.'],
+    };
+    constructor(x, y) {
+        super(x, y);
+        this.damage      = PoisonTower.meta.damage;
+        this.range       = PoisonTower.meta.range;
+        this.attackSpeed = PoisonTower.meta.attackSpeed;
+        this.color       = '#7dba00';
+    }
+
+    update(deltaTime, units) {
+        if (!this._tickReady(deltaTime)) return;
+        const target = this._selectTarget(units, { skipFlying: true, prefer: u => !u.isPoisoned });
+        if (target) {
+            const dmg = this.getDamage(target);
+            target.takeDamage(dmg, units, this);
+            target.isPoisoned  = true;
+            target.poisonTimer = PoisonTower.meta.poisonTime;
+            target.poisonDps   = dmg;
+            attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+        }
+        this._consumeTick(!!target);
+    }
+}
+
 export class InfernoTower extends Tower {
     static meta = {
         name: '인페르노 타워', rarity: 'EPIC',
@@ -611,6 +689,9 @@ export class AllRoundTower extends Tower {
         const hasSniper   = others.some(t => t instanceof SniperTower);
         const hasArea     = others.some(t => t instanceof AreaTower);
         const hasInferno  = others.some(t => t instanceof InfernoTower);
+        const hasSlow     = others.some(t => t instanceof SlowTower);
+        const hasStun     = others.some(t => t instanceof StunTower);
+        const hasMortar   = others.some(t => t instanceof MortarTower);
 
         // 은신 항상 공격 가능, 도발 무시
         const canTarget = (unit) => {
@@ -657,11 +738,36 @@ export class AllRoundTower extends Tower {
 
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
 
+        // 박격포 타워: 주 타겟 주변 60px 스플래시 30% 피해 (비행 제외)
+        if (hasMortar && target.alive) {
+            const r2 = 60 ** 2;
+            units.forEach(unit => {
+                if (!unit.active || !unit.alive || unit === target || unit.isFlying) return;
+                const dx = unit.x - target.x, dy = unit.y - target.y;
+                if (dx * dx + dy * dy > r2) return;
+                unit.takeDamage(dmg * 0.3, units, this);
+                attackFlashes.push({ x1: target.x, y1: target.y, x2: unit.x, y2: unit.y, color: this.color, timer: 0, duration: 0.15 });
+            });
+        }
+
         // 독 타워: 1초 독 (HealUnit에서 독 걸린 유닛 힐량 50% 감소 적용)
         if (hasPoison && target.alive) {
             target.isPoisoned  = true;
             target.poisonTimer = 1;
             target.poisonDps   = this.getDamage(target);
+        }
+
+        // 슬로우 타워: 1초 슬로우
+        if (hasSlow && target.alive) {
+            target.isSlowed   = true;
+            target.slowTimer  = 1;
+            target.slowFactor = SlowTower.meta.slow;
+        }
+
+        // 기절 타워: 0.05초 기절
+        if (hasStun && target.alive) {
+            target.isStunned = true;
+            target.stunTimer = 0.05;
         }
 
         // 전이 타워: 50% 피해 최대 2명 전이
@@ -687,8 +793,8 @@ export class AllRoundTower extends Tower {
             }
         }
 
-        // 저격 타워: 체력 5% 미만 즉시 처형
-        if (hasSniper && target.alive && target.hp / target.maxHp < 0.05) {
+        // 저격 타워: 체력 5% 이하 즉시 처형
+        if (hasSniper && target.alive && target.hp / target.maxHp <= 0.05) {
             target.takeDamage(target.hp, units, this);
         }
 
@@ -700,9 +806,9 @@ export const attackFlashes = [];
 
 export const TOWER_CLASSES = [
     NormalTower, HeavyTower, FastTower,
-    SkyTower, InfraredTower, PoisonTower,
+    SkyTower, InfraredTower, SlowTower, StunTower,
     AreaTower, ChainTower, MortarTower,
-    SniperTower, InfernoTower,
+    SniperTower, PoisonTower, InfernoTower,
     BuffTower,
     AllRoundTower,
 ];

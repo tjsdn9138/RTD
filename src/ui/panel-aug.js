@@ -42,6 +42,14 @@ export function renderAugPanel(container) {
             descEl.appendChild(document.createTextNode(line));
         });
 
+        if (aug.rewardLabel) {
+            descEl.appendChild(document.createElement('br'));
+            const resultEl = document.createElement('span');
+            resultEl.className = 'aug-panel-result';
+            resultEl.textContent = aug.rewardLabel;
+            descEl.appendChild(resultEl);
+        }
+
         card.append(header, descEl);
         container.appendChild(card);
     });

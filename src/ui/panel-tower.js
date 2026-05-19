@@ -111,7 +111,7 @@ function renderDetail(detail, tower, grid) {
             </div>
             ${meta.passive ? (Array.isArray(meta.passive) ? meta.passive : [meta.passive]).map((p, i) => {
                 const desc = Array.isArray(meta.passiveDesc) ? meta.passiveDesc[i] : meta.passiveDesc;
-                const resolved = typeof desc === 'function' ? desc(meta.decDamage ?? meta.poisonTime ?? meta.skyMul) : (desc ?? '');
+                const resolved = typeof desc === 'function' ? desc(meta.decDamage ?? meta.poisonTime ?? meta.skyMul ?? meta.slow) : (desc ?? '');
                 return `<div class="ulist-passive-wrap">
                 <div class="passive-tag">${p}</div>
                 <div class="ulist-passive-desc">${resolved}</div>

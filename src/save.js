@@ -64,6 +64,7 @@ export function saveGame() {
         }])),
 
         damageTakenBonus: game.damageTakenBonus,
+        goldBonus: game.goldBonus,
         augSlots: game.augSlots,
         manualSpawnDisabled: game.manualSpawnDisabled,
         augWaves: game.augWaves,
@@ -75,6 +76,9 @@ export function saveGame() {
             if (aug.goldGiven        !== undefined) entry.goldGiven        = aug.goldGiven;
             if (aug.wavesRemaining   !== undefined) entry.wavesRemaining   = aug.wavesRemaining;
             if (aug.originalUnitSlots !== undefined) entry.originalUnitSlots = aug.originalUnitSlots;
+            if (aug.reward           !== undefined) entry.reward           = aug.reward;
+            if (aug.lostLives        !== undefined) entry.lostLives        = aug.lostLives;
+            if (aug.rewardLabel      !== undefined) entry.rewardLabel      = aug.rewardLabel;
             return entry;
         }),
         savedAt: Date.now(),
@@ -96,6 +100,7 @@ export function loadGame() {
         game.boughtSlots = data.boughtSlots ?? 0;
         game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
         game.damageTakenBonus = data.damageTakenBonus ?? 0;
+        game.goldBonus        = data.goldBonus        ?? 0;
         game.augSlots         = data.augSlots ?? 0;
         game.augWaves   = data.augWaves ?? [];
         game.augPending = data.augPending ?? false;
@@ -109,6 +114,9 @@ export function loadGame() {
             if (entry.goldGiven         !== undefined) aug.goldGiven         = entry.goldGiven;
             if (entry.wavesRemaining    !== undefined) aug.wavesRemaining    = entry.wavesRemaining;
             if (entry.originalUnitSlots !== undefined) aug.originalUnitSlots = entry.originalUnitSlots;
+            if (entry.reward            !== undefined) aug.reward            = entry.reward;
+            if (entry.lostLives         !== undefined) aug.lostLives         = entry.lostLives;
+            if (entry.rewardLabel       !== undefined) aug.rewardLabel       = entry.rewardLabel;
             return aug;
         }).filter(Boolean);
 
