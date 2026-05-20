@@ -1,4 +1,4 @@
-import { game, inventory, ownedUnits, RARITY, getGachaCost, getGachaCostRange, weightedPick, checkItemLevelUp } from '../game.js';
+import { game, inventory, ownedUnits, RARITY, getGachaCost, getGachaCostRange, weightedPick, checkItemLevelUp, spendGold } from '../game.js';
 import { UNIT_CLASSES } from '../units.js';
 import { ITEM_CLASSES } from '../items.js';
 import { updateHUD } from './ui.js';
@@ -115,7 +115,7 @@ function doGacha(kind) {
     } else {
         const cost = getGachaCost(kind);
         if (game.gold < cost) return null;
-        game.gold -= cost;
+        spendGold(cost);
         game.gachaPulls[kind]++;
     }
     return applyPullReward(kind);
@@ -131,7 +131,7 @@ function doGacha10(kind) {
     } else {
         const goldNeeded = getGachaCostRange(kind, game.gachaPulls[kind], 10);
         if (game.gold < goldNeeded) return null;
-        game.gold -= goldNeeded;
+        spendGold(goldNeeded);
         game.gachaPulls[kind] += 10;
     }
 

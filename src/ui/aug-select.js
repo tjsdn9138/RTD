@@ -9,11 +9,12 @@ const RARITY_WEIGHT = {
 const SKIP_GOLD_PER_WAVE = 25;
 
 // 모달이 열려있는 동안의 상태
-let _cardsEl    = null;
-let _skipBtn    = null;
-let _closeFn    = null;
-let _onDone     = null;
-let _curChoices = [];
+let _cardsEl     = null;
+let _skipBtn     = null;
+let _closeFn     = null;
+let _onDone      = null;
+let _curChoices  = [];
+let _seenChoices = [];
 
 function pickOneAug(exclude) {
     const ownedNames   = new Set(game.augmentations.map(a => a.constructor.name));
@@ -91,9 +92,10 @@ function renderCards(choices) {
             e.stopPropagation();
             const item = inventory.find(i => i.type === 'AugReroll' && i.count > 0);
             if (!item) return;
-            const newAug = pickOneAug(_curChoices);
+            const newAug = pickOneAug(_seenChoices);
             if (!newAug) return;
             item.count--;
+            _seenChoices.push(newAug);
             _curChoices[idx] = newAug;
             game.augChoices = _curChoices.map(Cls => Cls.name);
             saveGame();
@@ -135,6 +137,7 @@ export function openAugSelect(onDone) {
         game.augChoices = _curChoices.map(Cls => Cls.name);
         saveGame();
     }
+    _seenChoices = [..._curChoices];
 
     const overlay = document.createElement('div');
     overlay.id = 'aug-overlay';
@@ -181,10 +184,11 @@ export function openAugSelect(onDone) {
         game.augChoices = [];
         document.removeEventListener('keydown', onKey, true);
         overlay.remove();
-        _cardsEl    = null;
-        _skipBtn    = null;
-        _closeFn    = null;
-        _onDone     = null;
-        _curChoices = [];
+        _cardsEl     = null;
+        _skipBtn     = null;
+        _closeFn     = null;
+        _onDone      = null;
+        _curChoices  = [];
+        _seenChoices = [];
     };
 }

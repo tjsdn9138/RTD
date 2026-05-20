@@ -28,7 +28,7 @@ export class ActiveItem extends Item {
 export class SpeedCharm extends PassiveItem {
     static meta = {
         name: '속도부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.02,
+        level: 1, multiplier: 1.05, LevelUpPlus: 0.02,
         desc: (mul) => `아군 전체의 속도를 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -43,7 +43,7 @@ export class SpeedCharm extends PassiveItem {
 export class HpCharm extends PassiveItem {
     static meta = {
         name: '체력부적', kind: 'passive', rarity: 'COMMON',
-        level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.1, LevelUpPlus: 0.04,
         desc: (mul) => `아군 전체의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -76,7 +76,7 @@ export class GoldCharm extends PassiveItem {
 export class CommonCharm extends PassiveItem {
     static meta = {
         name: '일반부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
         desc: (mul) => `일반 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -95,7 +95,7 @@ export class CommonCharm extends PassiveItem {
 export class UncommonCharm extends PassiveItem {
     static meta = {
         name: '고급부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
         desc: (mul) => `고급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -114,7 +114,7 @@ export class UncommonCharm extends PassiveItem {
 export class RareCharm extends PassiveItem {
     static meta = {
         name: '희귀부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.15, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
         desc: (mul) => `희귀 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -133,7 +133,7 @@ export class RareCharm extends PassiveItem {
 export class EpicCharm extends PassiveItem {
     static meta = {
         name: '영웅부적', kind: 'passive', rarity: 'UNCOMMON',
-        level: 1, multiplier: 1.15, LevelUpPlus: 0.05,
+        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
         desc: (mul) => `영웅 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
@@ -302,17 +302,6 @@ export class AugReroll extends ActiveItem {
     }
 }
 
-export class AugRerollEpic extends ActiveItem {
-    static meta = {
-        name: '증강 새로고침', kind: 'active', rarity: 'EPIC',
-        targetType: 'AugReroll',
-        desc: '증강 선택 시 새로고침을 2회 할 수 있습니다.',
-    };
-    constructor() {
-        super('증강 새로고침');
-    }
-}
-
 
 export class UnitTicketHero extends ActiveItem {
     static meta = {
@@ -393,7 +382,7 @@ export const ITEM_CLASSES = [
     // COMMON 액티브
     // UNCOMMON 액티브
     AugReroll,
-    UnitTicketHero, ItemTicketHero, AugRerollEpic,
+    UnitTicketHero, ItemTicketHero,
     TowerStop, UnitTicketLegend, ItemTicketLegend,
 ];
 export const ITEM_CLASS = Object.fromEntries(ITEM_CLASSES.map(Cls => [Cls.name, Cls]));

@@ -19,6 +19,8 @@ export const game = {
     spawnCount: 0,
     survivedCount: 0,
     deadCount: 0,
+    totalSurvived: 0,
+    totalGoldSpent: 0,
     units: [], // 출전 유닛
     towers: [], // 현재 타워
     gameSpeed: 1, // 게임 배속 (1 ~ 3)
@@ -63,7 +65,7 @@ export function getLevelUpCost(level) {
 export function buySlot() {
     const cost = getSlotCost();
     if (game.gold < cost || game.unitSlots >= MAX_SLOTS + game.augSlots) return null;
-    game.gold -= cost;
+    spendGold(cost);
     game.unitSlots++;
     game.boughtSlots++;
     return true;
@@ -135,6 +137,7 @@ export function retryWave() {
 export function nextWave() {
     game.towers.forEach(t => { if (t) t.stopped = false; });
     game.pendingItem = null;
+    game.totalSurvived += game.survivedCount;
     addGold(getReward());
     game.waveNumber++;
     game.waveResult  = null;
@@ -145,6 +148,12 @@ export function nextWave() {
 export function gameWin() {
     game.pendingItem = null;
     game.state       = STATE.GAMECLEAR;
+}
+
+// gold 감소 — 소모량 누적
+export function spendGold(amount) {
+    game.gold -= amount;
+    game.totalGoldSpent += amount;
 }
 
 // gold 증가 — 자동 애니메이션 이벤트 발생

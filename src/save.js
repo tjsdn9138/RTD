@@ -63,6 +63,8 @@ export function saveGame() {
             enabled: i.enabled,
         }])),
 
+        totalSurvived:  game.totalSurvived,
+        totalGoldSpent: game.totalGoldSpent,
         damageTakenBonus: game.damageTakenBonus,
         goldBonus: game.goldBonus,
         goldBonusPct: game.goldBonusPct,
@@ -100,6 +102,8 @@ export function loadGame() {
         game.unitSlots   = data.unitSlots;
         game.boughtSlots = data.boughtSlots ?? 0;
         game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
+        game.totalSurvived    = data.totalSurvived    ?? 0;
+        game.totalGoldSpent   = data.totalGoldSpent   ?? 0;
         game.damageTakenBonus = data.damageTakenBonus ?? 0;
         game.goldBonus        = data.goldBonus        ?? 0;
         game.goldBonusPct     = data.goldBonusPct     ?? 0;

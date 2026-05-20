@@ -136,9 +136,9 @@ export class NormalTower extends Tower {
 export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
-        damage: 350, attackSpeed: 0.6, range: 160,
-        dmgPlus: 50, speedPlus: 0.06, rangePlus: 20,
-        passive: null, passiveDesc: null,
+        damage: 400, attackSpeed: 0.6, range: 160,
+        dmgPlus: 60, speedPlus: 0.06, rangePlus: 16,
+        passive: '지상', passiveDesc: '비행 유닛을 공격할 수 없습니다.',
     };
     constructor(x, y) {
         super(x, y);
@@ -146,6 +146,16 @@ export class HeavyTower extends Tower {
         this.range       = HeavyTower.meta.range;
         this.attackSpeed = HeavyTower.meta.attackSpeed;
         this.color       = '#5d4037';
+    }
+
+    update(deltaTime, units) {
+        if (!this._tickReady(deltaTime)) return;
+        const target = this._selectTarget(units, { skipFlying: true });
+        if (target) {
+            target.takeDamage(this.getDamage(target), units, this);
+            attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
+        }
+        this._consumeTick(!!target);
     }
 }
 
@@ -229,8 +239,9 @@ export class SlowTower extends Tower {
         name: '슬로우 타워', rarity: 'UNCOMMON',
         damage: 120, attackSpeed: 1.5, range: 240,
         dmgPlus: 20, speedPlus: 0.15, rangePlus: 24,
-        passive: '슬로우', slow: 30,
-        passiveDesc: (slow) => `피격 받은 유닛의 속도를 1.5초 동안 ${slow}% 감소시킵니다.\n슬로우가 없는 유닛을 우선 공격합니다.`,
+        passive: ['슬로우', '지상'], slow: 30,
+        passiveDesc: [(slow) => `피격 받은 유닛의 속도를 1.5초 동안 ${slow}% 감소시킵니다.\n슬로우가 없는 유닛을 우선 공격합니다.`,
+            '비행 유닛을 공격할 수 없습니다.'],
     };
     constructor(x, y) {
         super(x, y);
@@ -242,7 +253,7 @@ export class SlowTower extends Tower {
 
     update(deltaTime, units) {
         if (!this._tickReady(deltaTime)) return;
-        const target = this._selectTarget(units, { prefer: u => !u.isSlowed });
+        const target = this._selectTarget(units, { skipFlying: true, prefer: u => !u.isSlowed });
         if (target) {
             target.takeDamage(this.getDamage(target), units, this);
             target.isSlowed   = true;
@@ -306,7 +317,7 @@ export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
         damage: 180, attackSpeed: 1, range: 220,
-        dmgPlus: 30, speedPlus: 0.1, rangePlus: 22,
+        dmgPlus: 40, speedPlus: 0.1, rangePlus: 22,
         passive:     ['전방위', '지상'],
         passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.',
             '비행 유닛을 공격할 수 없습니다.'],
@@ -341,7 +352,7 @@ export class ChainTower extends Tower {
     static meta = {
         name: '전이 타워', rarity: 'RARE',
         damage: 150, attackSpeed: 0.7, range: 160,
-        dmgPlus: 22, speedPlus: 0.07, rangePlus: 16,
+        dmgPlus: 30, speedPlus: 0.07, rangePlus: 16,
         passive: '전이', decDamage: 75,
         passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
     };
@@ -411,7 +422,7 @@ export class MortarTower extends Tower {
     static meta = {
         name: '박격포 타워', rarity: 'RARE',
         damage: 300, attackSpeed: 0.6, range: 240,
-        dmgPlus: 45, speedPlus: 0.06, rangePlus: 24,
+        dmgPlus: 55, speedPlus: 0.06, rangePlus: 24,
         passive: ['포탄', '지상'],
         passiveDesc: ['공격 시 큰 포탄을 발사해 주변 적도 함께 때립니다.',
             '비행 유닛을 공격할 수 없습니다.'],

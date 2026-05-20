@@ -188,6 +188,7 @@ elBtnStart.addEventListener('click', () => {
         deleteSave();
         updateHUD();
         refreshUnitPanel();
+        showGameClear();
         return;
       }
       nextWave();
@@ -232,7 +233,19 @@ function showGameOver(waveNumber) {
   document.getElementById('gameover-overlay').style.display  = 'flex';
 }
 
+function showGameClear() {
+  document.getElementById('gameclear-wave').textContent     = `${MAX_WAVES} / ${MAX_WAVES}`;
+  document.getElementById('gameclear-lives').textContent    = game.lives;
+  document.getElementById('gameclear-survived').textContent = game.totalSurvived;
+  document.getElementById('gameclear-spent').textContent    = game.totalGoldSpent;
+  document.getElementById('gameclear-overlay').style.display = 'flex';
+}
+
 document.getElementById('btn-restart').addEventListener('click', () => {
+  location.reload();
+});
+
+document.getElementById('btn-restart-clear').addEventListener('click', () => {
   location.reload();
 });
 
@@ -251,6 +264,7 @@ export function initUI() {
       updateHUD(); refreshUnitPanel(); saveGame(); renderAugPanel(panels['aug']);
     });
   }
+
 }
 
 // 단축키

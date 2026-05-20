@@ -3,7 +3,7 @@ import { TOWER_CLASSES } from './towers.js';
 import { ITEM_CLASSES, ITEM_CLASS } from './items.js';
 
 export * from './state.js';
-import { MAX_UNIT_LEVEL, MAX_TOWER_LEVEL, MAX_SLOTS, game, getLevelUpCost } from './state.js';
+import { MAX_UNIT_LEVEL, MAX_TOWER_LEVEL, MAX_SLOTS, game, getLevelUpCost, spendGold } from './state.js';
 
 // 희귀도 정보
 // TODO: 확률 조정
@@ -111,7 +111,7 @@ export function levelUpUnit(type) {
 
     owned.count -= cost.units;
     owned.count += 1;
-    game.gold   -= cost.gold;
+    spendGold(cost.gold);
 
     meta.hp    = Math.floor(meta.hp    + meta.hpPlus);
     meta.speed = Math.floor(meta.speed + meta.speedPlus);
