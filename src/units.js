@@ -651,8 +651,8 @@ export class SplitUnit extends Unit {
     static meta = {
         type: 'SplitUnit', name: '분열하는넘', rarity: 'EPIC',
         color: '#cd6155',
-        hp: 700, speed: 120, level: 1,
-        hpPlus: 95, speedPlus: 15, splitPlus: 1,
+        hp: 600, speed: 120, level: 1,
+        hpPlus: 80, speedPlus: 15, splitPlus: 1,
         passive: '분열', splitNum: 2,
         passiveDesc: (num) => `사망 시 ${num}마리로 분열합니다.\n분열된 유닛은 30%의 체력과 150%의 속도를 갖습니다.`,
     };

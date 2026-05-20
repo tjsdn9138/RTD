@@ -11,7 +11,7 @@ export const game = {
     state: STATE.READY,
     waveNumber: 1,
     lives: 3,
-    gold: 100,
+    gold: 1000,
     unitSlots: 2,
     boughtSlots: 0,
     spawnTimer: 0,
@@ -43,10 +43,10 @@ export const MAX_UNIT_LEVEL  = 20; // 유닛 최대 레벨
 export const MAX_TOWER_LEVEL = 20; // 타워 최대 레벨
 export const MAX_WAVES       = 50; // 총 웨이브 수
 
-// 유닛 슬롯 추가 가격 계산 — n*(n+1)/2 * 100 (n = 다음 구매 횟수)
+// 유닛 슬롯 추가 가격 계산 — n*(n+1) * 100 (n = 다음 구매 횟수)
 export function getSlotCost() {
     const n = game.boughtSlots + 1;
-    return n * (n + 1) / 2 * 100;
+    return n * (n + 1) * 100;
 }
 
 // 유닛 레벨업 가격 계산

@@ -136,8 +136,8 @@ export class NormalTower extends Tower {
 export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
-        damage: 440, attackSpeed: 0.5, range: 160,
-        dmgPlus: 66, speedPlus: 0.05, rangePlus: 20,
+        damage: 350, attackSpeed: 0.6, range: 160,
+        dmgPlus: 50, speedPlus: 0.06, rangePlus: 20,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -152,8 +152,8 @@ export class HeavyTower extends Tower {
 export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
-        damage: 80, attackSpeed: 2, range: 240,
-        dmgPlus: 12, speedPlus: 0.2, rangePlus: 24,
+        damage: 90, attackSpeed: 2, range: 240,
+        dmgPlus: 15, speedPlus: 0.2, rangePlus: 24,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
