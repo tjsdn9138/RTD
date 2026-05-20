@@ -65,6 +65,7 @@ export function saveGame() {
 
         damageTakenBonus: game.damageTakenBonus,
         goldBonus: game.goldBonus,
+        goldBonusPct: game.goldBonusPct,
         augSlots: game.augSlots,
         manualSpawnDisabled: game.manualSpawnDisabled,
         augWaves: game.augWaves,
@@ -101,6 +102,7 @@ export function loadGame() {
         game.gachaPulls  = data.gachaPulls ?? { unit: 0, item: 0 };
         game.damageTakenBonus = data.damageTakenBonus ?? 0;
         game.goldBonus        = data.goldBonus        ?? 0;
+        game.goldBonusPct     = data.goldBonusPct     ?? 0;
         game.augSlots         = data.augSlots ?? 0;
         game.augWaves   = data.augWaves ?? [];
         game.augPending = data.augPending ?? false;

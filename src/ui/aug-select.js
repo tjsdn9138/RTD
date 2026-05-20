@@ -91,8 +91,7 @@ function renderCards(choices) {
             e.stopPropagation();
             const item = inventory.find(i => i.type === 'AugReroll' && i.count > 0);
             if (!item) return;
-            const otherChoices = _curChoices.filter((_, i) => i !== idx);
-            const newAug = pickOneAug(otherChoices);
+            const newAug = pickOneAug(_curChoices);
             if (!newAug) return;
             item.count--;
             _curChoices[idx] = newAug;

@@ -45,7 +45,7 @@ function initFirstTower() {
         return cov > 0 ? 1 / cov : 0;
     });
     const idx = pickWeightedIndex(weights);
-    game.towers[idx] = new TOWER_CLASS['StunTower'](towerSlots[idx].x, towerSlots[idx].y);
+    game.towers[idx] = new TOWER_CLASS['NormalTower'](towerSlots[idx].x, towerSlots[idx].y);
 }
 
 // 슬롯에서 경로 세그먼트 중 range 안에 들어오는 길이 계산

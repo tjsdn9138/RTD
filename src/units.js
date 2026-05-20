@@ -654,7 +654,7 @@ export class SplitUnit extends Unit {
         hp: 700, speed: 120, level: 1,
         hpPlus: 95, speedPlus: 15, splitPlus: 1,
         passive: '분열', splitNum: 2,
-        passiveDesc: (num) => `사망 시 ${num}마리로 분열합니다.\n분열된 유닛은 30%의 체력과 200%의 속도를 갖습니다.`,
+        passiveDesc: (num) => `사망 시 ${num}마리로 분열합니다.\n분열된 유닛은 30%의 체력과 150%의 속도를 갖습니다.`,
     };
 
     constructor() {
@@ -700,7 +700,7 @@ export class SplitUnit extends Unit {
             child.splitNum         = this.splitNum;
             child.maxHp            = Math.floor(this.maxHp * 0.3);
             child.hp               = child.maxHp;
-            child.speed            = this.speed * 2.0;
+            child.speed            = this.speed * 1.5;
             child.waypoints        = this.waypoints;
             child.alive            = true;
             child.active           = true;

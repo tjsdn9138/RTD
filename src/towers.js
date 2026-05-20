@@ -121,7 +121,7 @@ export class NormalTower extends Tower {
     static meta = {
         name: '일반 타워', rarity: 'COMMON',
         damage: 200, attackSpeed: 1, range: 200,
-        dmgPlus: 20, speedPlus: 0.1, rangePlus: 20,
+        dmgPlus: 30, speedPlus: 0.1, rangePlus: 20,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -137,7 +137,7 @@ export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
         damage: 440, attackSpeed: 0.5, range: 160,
-        dmgPlus: 44, speedPlus: 0.05, rangePlus: 20,
+        dmgPlus: 66, speedPlus: 0.05, rangePlus: 20,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -153,7 +153,7 @@ export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
         damage: 80, attackSpeed: 2, range: 240,
-        dmgPlus: 8, speedPlus: 0.2, rangePlus: 24,
+        dmgPlus: 12, speedPlus: 0.2, rangePlus: 24,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -169,7 +169,7 @@ export class SkyTower extends Tower {
     static meta = {
         name: '공중 타워', rarity: 'UNCOMMON',
         damage: 120, attackSpeed: 1.2, range: 240,
-        dmgPlus: 12, speedPlus: 0.12, rangePlus: 24,
+        dmgPlus: 20, speedPlus: 0.12, rangePlus: 24,
         passive: '공중', skyMul : 2,
         passiveDesc: (mul) => `비행 유닛을 공격 시 데미지가 ${mul}배 증가하며,\n비행 유닛을 우선 공격합니다.`,
     };
@@ -201,7 +201,7 @@ export class InfraredTower extends Tower {
     static meta = {
         name: '적외선 타워', rarity: 'UNCOMMON',
         damage: 300, attackSpeed: 0.8, range: 240,
-        dmgPlus: 30, speedPlus: 0.08, rangePlus: 24,
+        dmgPlus: 45, speedPlus: 0.08, rangePlus: 24,
         passive: '적외선',
         passiveDesc: '은신한 유닛을 공격할 수 있고, 은신한 유닛을 우선 공격합니다.',
     };
@@ -228,7 +228,7 @@ export class SlowTower extends Tower {
     static meta = {
         name: '슬로우 타워', rarity: 'UNCOMMON',
         damage: 120, attackSpeed: 1.5, range: 240,
-        dmgPlus: 15, speedPlus: 0.15, rangePlus: 24,
+        dmgPlus: 20, speedPlus: 0.15, rangePlus: 24,
         passive: '슬로우', slow: 30,
         passiveDesc: (slow) => `피격 받은 유닛의 속도를 1.5초 동안 ${slow}% 감소시킵니다.\n슬로우가 없는 유닛을 우선 공격합니다.`,
     };
@@ -258,7 +258,7 @@ export class StunTower extends Tower {
     static meta = {
         name: '기절 타워', rarity: 'UNCOMMON',
         damage: 80, attackSpeed: 1.3, range: 240,
-        dmgPlus: 10, speedPlus: 0.13, rangePlus: 24,
+        dmgPlus: 12, speedPlus: 0.13, rangePlus: 24,
         passive: ['일타쌍피', '기절'],
         passiveDesc: ['공격 시 두 명의 유닛을 동시에 공격합니다.',
             '피격 받은 유닛을 잠깐 동안 멈춥니다.'],
@@ -306,7 +306,7 @@ export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
         damage: 180, attackSpeed: 1, range: 220,
-        dmgPlus: 20, speedPlus: 0.1, rangePlus: 22,
+        dmgPlus: 30, speedPlus: 0.1, rangePlus: 22,
         passive:     ['전방위', '지상'],
         passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.',
             '비행 유닛을 공격할 수 없습니다.'],
@@ -341,7 +341,7 @@ export class ChainTower extends Tower {
     static meta = {
         name: '전이 타워', rarity: 'RARE',
         damage: 150, attackSpeed: 0.7, range: 160,
-        dmgPlus: 20, speedPlus: 0.07, rangePlus: 16,
+        dmgPlus: 22, speedPlus: 0.07, rangePlus: 16,
         passive: '전이', decDamage: 75,
         passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
     };
@@ -411,7 +411,7 @@ export class MortarTower extends Tower {
     static meta = {
         name: '박격포 타워', rarity: 'RARE',
         damage: 300, attackSpeed: 0.6, range: 240,
-        dmgPlus: 30, speedPlus: 0.06, rangePlus: 24,
+        dmgPlus: 45, speedPlus: 0.06, rangePlus: 24,
         passive: ['포탄', '지상'],
         passiveDesc: ['공격 시 큰 포탄을 발사해 주변 적도 함께 때립니다.',
             '비행 유닛을 공격할 수 없습니다.'],
@@ -458,7 +458,7 @@ export class SniperTower extends Tower {
     static meta = {
         name: '저격 타워', rarity: 'EPIC',
         damage: 1000, attackSpeed: 0.2, range: 400,
-        dmgPlus: 100, speedPlus: 0.02, rangePlus: 40,
+        dmgPlus: 150, speedPlus: 0.02, rangePlus: 40,
         passive: '저격',
         passiveDesc: '체력이 가장 낮은 적을 우선 공격하며,\nHP 10% 이하의 적을 즉시 처형합니다.',
     };
@@ -514,7 +514,7 @@ export class PoisonTower extends Tower {
     static meta = {
         name: '독 타워', rarity: 'EPIC',
         damage: 60, attackSpeed: 1.2, range: 240,
-        dmgPlus: 8, speedPlus: 0.12, rangePlus: 24,
+        dmgPlus: 10, speedPlus: 0.12, rangePlus: 24,
         passive: ['독', '지상'], poisonTime: 3,
         passiveDesc: [(time) => `${time}초에 걸쳐 도트 데미지를 받습니다.\n독에 걸린 유닛은 받는 회복량이 50% 감소됩니다.`,
             '비행 유닛을 공격할 수 없습니다.'],
@@ -546,7 +546,7 @@ export class InfernoTower extends Tower {
     static meta = {
         name: '인페르노 타워', rarity: 'EPIC',
         damage: 50, attackSpeed: 0, range: 300,
-        dmgPlus: 5, speedPlus: 0, rangePlus: 30,
+        dmgPlus: 10, speedPlus: 0, rangePlus: 30,
         passive: '인페르노',
         passiveDesc: '같은 대상을 오래 공격할수록 더 큰 피해를 입힙니다.',
     };

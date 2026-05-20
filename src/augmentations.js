@@ -238,7 +238,7 @@ export class InterestAug extends Augmentation {
         desc: '획득하는 모든 골드가 5% 증가합니다.',
     }
     onAcquire() {
-        game.goldBonus += 5;
+        game.goldBonusPct += 5;
     }
 }
 

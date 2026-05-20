@@ -25,7 +25,8 @@ export const game = {
     time: 0, // 게임 진행 시간(ms, gameSpeed 반영) — 시각 펄스 등에 사용
     waveResult: null, // 'CLEAR' | 'FAIL' | null
     pendingItem: null, // 사용 대기 중인 소비 아이템 type
-    goldBonus: 0,
+    goldBonus: 0,    // flat 가산 — GoldCharm 등 패시브 아이템용 (매 웨이브 초기화)
+    goldBonusPct: 0, // % 배율 — InterestAug 등 영구 효과용 (addGold에 적용)
     autoSpawn: false,  // 자동 출전 활성화 여부
     manualSpawnDisabled: false, // 수동 출전 차단 여부 (AI의 반란)
     gachaPulls: { unit: 0, item: 0 },
@@ -149,7 +150,7 @@ export function gameWin() {
 // gold 증가 — 자동 애니메이션 이벤트 발생
 export function addGold(amount) {
     if (amount <= 0) return;
-    const actual = Math.floor(amount * (1 + game.goldBonus / 100));
+    const actual = Math.floor(amount * (1 + game.goldBonusPct / 100));
     game.gold += actual;
     document.dispatchEvent(new CustomEvent('goldgain', { detail: actual }));
 }
