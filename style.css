@@ -11,23 +11,32 @@
   padding: 0;
 }
 
+/* 외곽: viewport 채움. stage 종횡비가 안 맞을 때 letterbox/pillarbox 배경. */
+html, body {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  font-family: 'NeoDunggeunmo', monospace;
+  image-rendering: pixelated;
+}
 body {
-  background: #c8b88a;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  font-family: 'NeoDunggeunmo', monospace;
-  overflow: hidden;
-  image-rendering: pixelated;
 }
 
+/* Stage: 논리 해상도 1600×900 고정. transform: scale 로 viewport 에 맞춤. */
 #app {
   display: flex;
-  width: 100vw;
-  height: 100vh;
+  width: 1600px;
+  height: 900px;
+  flex-shrink: 0;
   overflow: visible;
   border: 4px solid #8a7a5a;
+  background: #c8b88a;
+  transform: scale(var(--stage-scale, 1));
+  transform-origin: center center;
 }
 
 #gameCanvas {
@@ -39,15 +48,13 @@ body {
   border-right: 4px solid #8a7a5a;
 }
 
-/* 사이드바 전체 */
+/* 사이드바 전체 — stage 안에서 고정 폭. zoom 제거(stage scale 이 자동 처리). */
 #sidebar {
   display: flex;
   flex-direction: row;
-  width: 40vw;
-  min-width: 400px;
-  max-width: 640px;
+  width: 640px;
+  flex-shrink: 0;
   overflow: visible;
-  zoom: var(--ui-scale, 1);
 }
 
 /* 패널 영역 */
@@ -2042,4 +2049,225 @@ body {
   color: #6a5a3a;
   line-height: 1.7;
   white-space: pre-line;
+}
+
+/* ── 웨이브 결과 팝업 (클리어/실패) — 가벼운 베이지 톤 ── */
+#waveresult-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 8, 4, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    animation: wr-fadein 0.2s ease;
+    image-rendering: pixelated;
+}
+
+@keyframes wr-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+#waveresult-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    min-width: 560px;
+    max-width: 820px;
+    padding: 40px 64px 36px;
+    image-rendering: pixelated;
+    zoom: var(--ui-scale, 1);
+    animation: wr-slidein 0.25s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+@keyframes wr-slidein {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* 클리어 — 베이지 + 약한 그린 틴트 */
+#waveresult-box.wr-clear {
+    background: #d8dcb4;
+    border: 3px solid #2a8a00;
+    box-shadow: 4px 4px 0 #1a4a08, inset 0 0 0 2px #e4e8c0;
+}
+/* 실패 — 베이지 + 약한 레드 틴트 */
+#waveresult-box.wr-fail {
+    background: #dcc8b4;
+    border: 3px solid #aa1800;
+    box-shadow: 4px 4px 0 #4a0a00, inset 0 0 0 2px #e8d4c0;
+}
+
+/* 타이틀 — 작고 단순한 픽셀 그림자만, 펄스/글로우 없음 */
+.wr-title {
+    font-size: 40px;
+    font-family: 'NeoDunggeunmo', monospace;
+    text-align: center;
+    letter-spacing: 5px;
+    padding: 4px 0 6px;
+}
+#waveresult-box.wr-clear .wr-title {
+    color: #2a8a00;
+    text-shadow: 2px 2px 0 #1a4a08;
+}
+#waveresult-box.wr-fail .wr-title {
+    color: #aa1800;
+    text-shadow: 2px 2px 0 #4a0a00;
+}
+
+/* 출전 유닛 그리드 — 5컬럼 고정 */
+.wr-units {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding: 14px;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 2px solid;
+    box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.18);
+}
+#waveresult-box.wr-clear .wr-units {
+    background: #b8c890;
+    border-color: #4a7a30;
+}
+#waveresult-box.wr-fail .wr-units {
+    background: #c8a48c;
+    border-color: #8a3018;
+}
+
+.wr-unit-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 5px 6px;
+    background: #e0d4ac;
+    border: 2px solid;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
+    transition: transform 0.08s;
+}
+#waveresult-box.wr-clear .wr-unit-card { border-color: #4a7a30; }
+#waveresult-box.wr-fail  .wr-unit-card { border-color: #8a3018; }
+
+/* 사망 유닛 카드 — 흐림 + 빨간 X 오버레이 */
+.wr-unit-card.wr-failed {
+    opacity: 0.65;
+    filter: grayscale(40%);
+}
+.wr-unit-card.wr-failed::after {
+    content: '✕';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'NeoDunggeunmo', monospace;
+    font-size: 56px;
+    color: #d62020;
+    text-shadow: 2px 2px 0 #4a0606, -1px -1px 0 #fcf8e0;
+    opacity: 0.95;
+    pointer-events: none;
+    line-height: 1;
+}
+.wr-unit-card:hover { transform: translate(-1px, -1px); }
+
+.wr-unit-ico {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #2a1a0a;
+}
+.wr-unit-name {
+    font-size: 13px;
+    font-family: 'NeoDunggeunmo', monospace;
+    color: #2a1a0a;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 84px;
+}
+
+.wr-units-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 15px;
+    font-family: 'NeoDunggeunmo', monospace;
+    color: #6a5a3a;
+    padding: 28px 12px;
+    letter-spacing: 1px;
+}
+
+/* 통계 행 */
+.wr-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 14px;
+    padding: 14px 0;
+    width: 100%;
+    border-top: 2px dashed;
+    border-bottom: 2px dashed;
+}
+#waveresult-box.wr-clear .wr-stats { border-color: #4a7a30; }
+#waveresult-box.wr-fail  .wr-stats { border-color: #8a3018; }
+
+.wr-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 82px;
+}
+.wr-stat .wr-label {
+    font-size: 13px;
+    font-family: 'NeoDunggeunmo', monospace;
+    letter-spacing: 1px;
+}
+.wr-stat .wr-val {
+    font-size: 24px;
+    font-family: 'NeoDunggeunmo', monospace;
+    color: #2a1a0a;
+    margin-top: 4px;
+}
+#waveresult-box.wr-clear .wr-stat .wr-label { color: #4a7a30; }
+#waveresult-box.wr-fail  .wr-stat .wr-label { color: #8a3018; }
+.wr-stat.wr-reward .wr-val      { color: #c87800; }
+.wr-stat.wr-life-loss .wr-val   { color: #aa1800; }
+
+/* 버튼 — 사이드바 톤의 가벼운 픽셀 버튼 */
+.wr-btn {
+    width: 280px;
+    padding: 17px 0 16px;
+    font-family: 'NeoDunggeunmo', monospace;
+    font-size: 20px;
+    cursor: pointer;
+    image-rendering: pixelated;
+    letter-spacing: 3px;
+    border: none;
+    transition: transform 0.06s, box-shadow 0.06s, background 0.12s;
+}
+
+#waveresult-box.wr-clear .wr-btn {
+    background: #c8e8a8;
+    color: #1a4a08;
+    box-shadow: inset 2px 2px 0 #e0f4c8, inset -2px -2px 0 #2a8a00, 2px 2px 0 #1a4a08;
+}
+#waveresult-box.wr-clear .wr-btn:hover { background: #d4ecb4; }
+#waveresult-box.wr-clear .wr-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: inset 2px 2px 0 #e0f4c8, inset -2px -2px 0 #2a8a00;
+}
+
+#waveresult-box.wr-fail .wr-btn {
+    background: #f0c8b8;
+    color: #4a0a00;
+    box-shadow: inset 2px 2px 0 #f8dcd0, inset -2px -2px 0 #aa1800, 2px 2px 0 #4a0a00;
+}
+#waveresult-box.wr-fail .wr-btn:hover { background: #f4d4c4; }
+#waveresult-box.wr-fail .wr-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: inset 2px 2px 0 #f8dcd0, inset -2px -2px 0 #aa1800;
 }

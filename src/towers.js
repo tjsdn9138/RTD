@@ -320,8 +320,8 @@ export class StunTower extends Tower {
 export class AreaTower extends Tower {
     static meta = {
         name: '전방위 타워', rarity: 'RARE',
-        damage: 180, attackSpeed: 1, range: 220,
-        dmgPlus: 40, speedPlus: 0.1, rangePlus: 22,
+        damage: 150, attackSpeed: 1, range: 220,
+        dmgPlus: 30, speedPlus: 0.1, rangePlus: 22,
         passive:     ['전방위', '지상'],
         passiveDesc: ['범위 내 모든 적을 동시에 공격합니다.',
             '비행 유닛을 공격할 수 없습니다.'],

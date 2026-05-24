@@ -2,12 +2,13 @@ import { initUI, updateHUD, refreshUnitPanel, refreshBagPanel } from './ui/ui.js
 import { initUnitPopup } from './ui/unit-popup.js';
 import { loadGame, deleteSave, saveGame } from './save.js';
 import { initTitleScreen } from './ui/title.js';
-import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL, generateAugWaves } from './game.js';
+import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL, MAX_WAVES, getReward, getFailReward, generateAugWaves } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
 import { shatterEffects, BuffUnit } from './units.js';
 import { applyPassiveItems } from './items.js';
 import { dispatchAug } from './augmentations.js';
+import { showWaveResultPopup } from './ui/wave-result-popup.js';
 
 // canvas 세팅
 const canvas = document.getElementById('gameCanvas');
@@ -85,9 +86,10 @@ function pickWeightedIndex(weights) {
     return weights.length - 1;
 }
 
-// 창 크기에 맞춰서 캔버스 크기 설정
+// 창 크기에 맞춰서 캔버스 크기 설정 — 캔버스 픽셀은 logical × stageScale × DPR 로 viewport 와 1:1 매핑.
 function resizeCanvas() {
     const dpr  = window.devicePixelRatio || 1;
+    const s    = setStageScale();
     const cssW = canvas.offsetWidth;
     const cssH = canvas.offsetHeight;
 
@@ -96,9 +98,9 @@ function resizeCanvas() {
     logicalW = cssW;
     logicalH = cssH;
 
-    canvas.width  = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.width  = Math.round(cssW * s * dpr);
+    canvas.height = Math.round(cssH * s * dpr);
+    ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
 
     initMap();
 
@@ -113,38 +115,43 @@ function resizeCanvas() {
             }
         });
     }
-    setUIScale();
 }
 
-// 뷰포트 크기에 따라 UI 전체 스케일 계산 (브라우저 zoom과 무관)
-function setUIScale() {
-    const scaleH = window.innerHeight / 768;
-    const scaleW = (window.innerWidth * 0.4) / 640;
-    const scale  = Math.max(0.7, Math.min(1.4, Math.min(scaleH, scaleW)));
-    document.documentElement.style.setProperty('--ui-scale', scale);
+// 논리 해상도 1600×900 stage 를 viewport 에 맞춰 scale.
+// stage 종횡비가 viewport 와 다르면 letterbox/pillarbox 가 자동 생김.
+// --ui-scale 은 stage 밖의 fixed 오버레이(타이틀/게임오버/튜토리얼 등) zoom 용으로 동일 값 사용.
+const STAGE_W = 1600;
+const STAGE_H = 900;
+function setStageScale() {
+    const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+    document.documentElement.style.setProperty('--stage-scale', s);
+    document.documentElement.style.setProperty('--ui-scale', s);
+    return s;
 }
-setUIScale();
+setStageScale();
 
-// 창 크기 변경 시 실행 (브라우저 zoom 변경은 무시)
-// Chrome  zoom: innerWidth × dpr 일정 (dpr 같이 변함)
-// Safari  zoom: outerWidth 일정   (dpr 안 변하고 innerWidth만 줄어듦)
-let lastPhysViewW = Math.round(window.innerWidth  * (window.devicePixelRatio || 1));
-let lastPhysViewH = Math.round(window.innerHeight * (window.devicePixelRatio || 1));
-let lastOuterW    = window.outerWidth;
-let lastOuterH    = window.outerHeight;
-window.addEventListener('resize', () => {
-    const physW  = Math.round(window.innerWidth  * (window.devicePixelRatio || 1));
-    const physH  = Math.round(window.innerHeight * (window.devicePixelRatio || 1));
-    const outerW = window.outerWidth;
-    const outerH = window.outerHeight;
-    const isZoom = (physW === lastPhysViewW && physH === lastPhysViewH)
-                || (outerW === lastOuterW   && outerH === lastOuterH);
-    lastPhysViewW = physW;
-    lastPhysViewH = physH;
-    lastOuterW    = outerW;
-    lastOuterH    = outerH;
-    if (!isZoom) resizeCanvas();
-});
+// 창 크기/배율/DPR 변경 시 — stage 안 캔버스 CSS 크기는 고정이지만 stage scale 과 DPR 보정을 갱신.
+window.addEventListener('resize', () => resizeCanvas());
+
+// RESULT 진입 시점 / load 후 복원 시점 양쪽에서 사용하는 결과 스냅샷 생성기.
+// 출전한 모든 유닛을 순서대로 추출 (통과/사망 둘 다 카드로 표시). SplitUnit 자식은 제외 (부모 카드로 통합).
+function makeResultSnapshot(result) {
+    const isClear = result === 'CLEAR';
+    const spawned = game.units
+        .filter(u => u.spawned && !u.isSplit)
+        .map(u => ({
+            color:    u.color,
+            name:     u.constructor.meta?.name ?? u.constructor.name,
+            survived: !!(u.waypoints && u.waypointIndex >= u.waypoints.length),
+        }));
+    const deadCount = spawned.filter(u => !u.survived).length;
+    return {
+        spawned,
+        deadCount,
+        reward:   isClear ? getReward() : getFailReward(),
+        lifeLost: isClear ? 0 : 1,
+    };
+}
 
 // 수동 유닛 출전 (autoSpawn 중이거나 수동 출전 차단 상태면 차단)
 document.addEventListener('spawnunit', (e) => {
@@ -218,9 +225,11 @@ canvas.addEventListener('click', (e) => {
     const stopItem = inventory.find(i => i.type === 'TowerStop' && i.count > 0);
     if (!stopItem) return;
 
+    // stage scale 보정 — getBoundingClientRect 는 transform 적용된 viewport 크기 반환.
+    // logical 좌표(logicalW × logicalH)로 환산.
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    const mx = (e.clientX - rect.left) * (logicalW / rect.width);
+    const my = (e.clientY - rect.top)  * (logicalH / rect.height);
 
     let used = false;
     game.towers.forEach(tower => {
@@ -418,6 +427,28 @@ function gameLoop(timestamp) {
         else dispatchAug('onWaveFail', game.units);
         updateHUD();
         refreshUnitPanel();
+
+        if (game.waveResult === 'CLEAR') {
+            if (game.waveNumber >= MAX_WAVES) {
+                // 마지막 웨이브 클리어 — 팝업 없이 즉시 게임 클리어 화면 (ui.js elBtnStart 핸들러 위임)
+                document.getElementById('btn-start').click();
+            } else {
+                const snap = makeResultSnapshot('CLEAR');
+                game.resultSnapshot = snap;
+                showWaveResultPopup({ result: 'CLEAR', wave: game.waveNumber, ...snap });
+                saveGame();
+            }
+        } else {
+            // 라이프 1 실패 — 팝업 없이 즉시 게임오버 (loseLife 가 GAMEOVER 로 전이)
+            if (game.lives <= 1) {
+                document.getElementById('btn-start').click();
+            } else {
+                const snap = makeResultSnapshot('FAIL');
+                game.resultSnapshot = snap;
+                showWaveResultPopup({ result: 'FAIL', wave: game.waveNumber, ...snap });
+                saveGame();
+            }
+        }
     }
     prevState = game.state;
 
@@ -441,6 +472,19 @@ function startGame(isNew) {
         generateAugWaves(); // 구세이브 호환
     }
     initUI();
+
+    // load 직후 RESULT 상태면 팝업 자동 복원. 게임루프의 RESULT 진입 분기가 중복 실행되지
+    // 않도록 prevState 를 사전에 RESULT 로 설정 (dispatchAug 두 번 호출 방지).
+    if (!isNew && game.state === STATE.RESULT && game.resultSnapshot) {
+        prevState = STATE.RESULT;
+        const snap = game.resultSnapshot;
+        showWaveResultPopup({
+            result: game.waveResult,
+            wave: game.waveNumber,
+            ...snap,
+        });
+    }
+
     requestAnimationFrame(gameLoop);
 }
 

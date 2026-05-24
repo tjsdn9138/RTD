@@ -1,4 +1,4 @@
-import { game } from './state.js';
+import { game, STATE } from './state.js';
 import { ownedUnits, inventory, deploySlots } from './game.js';
 import { UNIT_CLASSES } from './units.js';
 import { ITEM_CLASSES } from './items.js';
@@ -86,6 +86,18 @@ export function saveGame() {
         }),
         savedAt: Date.now(),
     };
+
+    // RESULT 상태에서 save 된 경우 — 팝업 복원에 필요한 스냅샷도 함께 저장.
+    // 다른 상태(READY)에선 game.resultSnapshot 이 null 이라 자동 제외.
+    if (game.state === STATE.RESULT && game.resultSnapshot) {
+        data.resultSnapshot = {
+            waveResult:    game.waveResult,
+            survivedCount: game.survivedCount,
+            deadCount:     game.deadCount,
+            ...game.resultSnapshot,
+        };
+    }
+
     localStorage.setItem(KEY, JSON.stringify(data));
 }
 
@@ -188,6 +200,24 @@ export function loadGame() {
             item.owned   = saved.owned;
             item.enabled = saved.enabled;
         });
+
+        // RESULT 상태 복원 — load 후 main.js startGame 이 팝업 다시 표시.
+        if (data.resultSnapshot) {
+            const snap = data.resultSnapshot;
+            game.state         = STATE.RESULT;
+            game.waveResult    = snap.waveResult;
+            game.survivedCount = snap.survivedCount ?? 0;
+            game.deadCount     = snap.deadCount     ?? 0;
+            // 구 세이브 호환: survived 배열만 있던 포맷은 모두 통과로 마킹해 spawned 로 변환
+            const spawned = snap.spawned
+                ?? (snap.survived ?? []).map(u => ({ ...u, survived: true }));
+            game.resultSnapshot = {
+                spawned,
+                deadCount: snap.deadCount ?? 0,
+                reward:    snap.reward   ?? 0,
+                lifeLost:  snap.lifeLost ?? 0,
+            };
+        }
 
         return true;
     } catch {

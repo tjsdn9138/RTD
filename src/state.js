@@ -38,6 +38,7 @@ export const game = {
     augPending: false,
     augChoices: [],
     augSlots: 0,
+    resultSnapshot: null, // RESULT 상태 저장 시 통과 유닛/사망 수/보상/라이프 손실 보관 (load 시 팝업 복원용)
 };
 
 export const MAX_SLOTS       = 10; // 유닛 최대 개수
@@ -128,10 +129,11 @@ export function loseLife() {
 // 동일 웨이브 재시도
 export function retryWave() {
     game.towers.forEach(t => { if (t) t.stopped = false; });
-    game.pendingItem = null;
-    game.waveResult  = null;
-    game.state       = STATE.READY;
-    game.goldBonus   = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
+    game.pendingItem    = null;
+    game.waveResult     = null;
+    game.state          = STATE.READY;
+    game.goldBonus      = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
+    game.resultSnapshot = null;
 }
 
 // 다음 웨이브로 넘어가기
@@ -141,9 +143,10 @@ export function nextWave() {
     game.totalSurvived += game.survivedCount;
     addGold(getReward());
     game.waveNumber++;
-    game.waveResult  = null;
-    game.state       = STATE.READY;
-    game.goldBonus   = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
+    game.waveResult     = null;
+    game.state          = STATE.READY;
+    game.goldBonus      = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
+    game.resultSnapshot = null;
 }
 
 // 게임 클리어

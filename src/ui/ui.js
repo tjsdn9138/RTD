@@ -1,6 +1,7 @@
 import { STATE, game, startWave, nextWave, retryWave, loseLife, gameWin, deploySlots, ownedUnits, getLevelUpCost, MAX_UNIT_LEVEL, MAX_WAVES } from '../game.js';
 import { openAugSelect } from './aug-select.js';
 import { saveGame, deleteSave } from '../save.js';
+import { closeWaveResultPopup } from './wave-result-popup.js';
 import { UNIT_CLASS, UNIT_CLASSES } from '../units.js';
 import { renderUnitPanel, refreshUnitPanel } from './panel-unit.js';
 import { renderUnitListPanel } from './panel-unit-list.js';
@@ -181,6 +182,7 @@ elBtnStart.addEventListener('click', () => {
     elBtnStart.dispatchEvent(new CustomEvent('wavestart', { detail: { units }, bubbles: true }));
   }
   else if (game.state === STATE.RESULT) {
+    closeWaveResultPopup();
     let showAugSelect = false;
     if (game.waveResult === 'CLEAR') {
       if (game.waveNumber >= MAX_WAVES) {
