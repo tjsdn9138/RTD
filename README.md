@@ -10,7 +10,7 @@
 2. **WAVE START** — 전투를 시작하면 유닛들이 경로를 따라 이동합니다
 3. **생존** — 타워의 공격을 피해 최대한 많은 유닛을 통과시킵니다
 4. **성장** — 클리어 보상으로 골드를 모아 유닛을 강화하고 슬롯을 늘립니다
-5. **40웨이브** 클리어가 목표입니다
+5. **50웨이브** 클리어가 목표입니다
 
 ## 플레이
 
@@ -35,8 +35,9 @@ RTD/
     ├── game.js        # 핵심 게임 로직
     ├── units.js       # 유닛 클래스
     ├── towers.js      # 타워 클래스
-    ├── items.js       # 아이템 시스템
-    ├── save.js        # 저장/불러오기
+    ├── items.js          # 아이템 시스템
+    ├── augmentations.js  # 증강 시스템
+    ├── save.js           # 저장/불러오기
     ├── maps/
     │   └── map1.js
     └── ui/
@@ -47,5 +48,8 @@ RTD/
         ├── panel-tower.js
         ├── panel-bag.js
         ├── panel-shop.js
+        ├── panel-aug.js
+        ├── aug-select.js
+        ├── wave-result-popup.js
         └── tutorial.js
 ```
