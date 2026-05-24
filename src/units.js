@@ -38,6 +38,9 @@ export class Unit {
         this.slowFactor      = 0;
         this.isStunned       = false;
         this.stunTimer       = 0;
+        this.statusImmune    = false;
+        this.invincibleTimer = 0;
+        this.isDashing       = false;
         this.damageReduction  = 0;
         this.distanceTraveled = 0;
     }
@@ -146,8 +149,17 @@ export class Unit {
             game.deadCount++;
             if (!this.isSplit) _notifyUnit(this, 'death');
             dispatchAug('onUnitDeath', this, units);
+            this._onDeath(units);
             checkWaveEnd();
         }
+    }
+
+    // 사망 직후 훅 — checkWaveEnd 이전 호출. 자식 유닛 스폰 등 사망 후 처리에 사용.
+    _onDeath(units) {}
+
+    // 상태이상 면역 여부 — 부여 측에서 호출. 영구 면역(statusImmune) + 일시 무적(invincibleTimer/isDashing) 통합.
+    isStatusImmune() {
+        return this.statusImmune || this.invincibleTimer > 0 || this.isDashing;
     }
 
     // 유닛 그리기
@@ -350,7 +362,7 @@ export class HealUnit extends Unit {
         hp: 300, speed: 200, level: 1,
         hpPlus: 40, speedPlus: 10, healPlus: 100,
         passive: '힐', heal: 100,
-        passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 아군 한명의 체력을 ${heal}만큼 회복시킵니다.`,
+        passiveDesc: (heal) => `1초마다 범위 내 체력이 가장 적은 유닛의 체력을 ${heal} 회복시킵니다.\n또한 힐 범위 내 가장 느린 아군의 속도에 맞춰 이동합니다.`,
     };
 
     static HEAL_RANGE    = 150;
@@ -364,9 +376,30 @@ export class HealUnit extends Unit {
         this.heal       = HealUnit.meta.heal;
         this.color      = HealUnit.meta.color;
         this.healTimer  = 0;
+        this.baseSpeed  = HealUnit.meta.speed;
+    }
+
+    spawn(waypoints, hpMultiplier = 1, speedMultiplier = 1) {
+        super.spawn(waypoints, hpMultiplier, speedMultiplier);
+        this.baseSpeed = this.speed;
+    }
+
+    _matchSpeed(units) {
+        const range2 = HealUnit.HEAL_RANGE ** 2;
+        let minSpeed = this.baseSpeed;
+        for (const u of units) {
+            if (u === this || !u.active || !u.alive) continue;
+            const dx = u.x - this.x;
+            const dy = u.y - this.y;
+            if (dx * dx + dy * dy <= range2)
+                minSpeed = Math.min(minSpeed, u.speed * (1 - u.slowFactor / 100));
+        }
+        this.speed = minSpeed;
     }
 
     update(deltaTime, units) {
+        if (!this.active || !this.alive) return;
+        this._matchSpeed(units);
         super.update(deltaTime, units);
         if (!this.active || !this.alive) return;
 
@@ -418,74 +451,64 @@ export class HealUnit extends Unit {
     }
 }
 
-export class TauntUnit extends Unit {
-    static meta = {
-        type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
-        color: '#e74c3c',
-        hp: 1100, speed: 100, level: 1,
-        hpPlus: 120, speedPlus: 10,
-        passive: '도발',
-        passiveDesc: '모든 타워가 이 유닛을 우선 공격합니다.',
-    };
-    constructor() {
-        super();
-        this.maxHp    = TauntUnit.meta.hp;
-        this.hp       = this.maxHp;
-        this.speed    = TauntUnit.meta.speed;
-        this.color    = TauntUnit.meta.color;
-        this.taunting = true;
-    }
-}
-
 export class BuffUnit extends Unit {
     static meta = {
-        type: 'BuffUnit', name: '버프주는넘', rarity: 'RARE',
+        type: 'BuffUnit', name: '버프주는넘', rarity: 'UNCOMMON',
         color: '#e91e8c',
         hp: 400, speed: 200, level: 1,
         hpPlus: 45, speedPlus: 10, decPlus: 5,
         passive: '버프', decDamage: 5,
-        passiveDesc: (dec) => `범위 내 아군의 받는 피해량이 ${dec}% 감소합니다.`,
+        passiveDesc: (dec) => `범위 내 아군의 받는 피해량이 ${dec}% 감소합니다.\n또한 버프 범위 내 가장 느린 아군의 속도에 맞춰 이동합니다.`,
     };
 
     static BUFF_RANGE = 150;
 
     constructor() {
         super();
-        this.maxHp    = BuffUnit.meta.hp;
-        this.hp       = this.maxHp;
-        this.speed    = BuffUnit.meta.speed;
-        this.color    = BuffUnit.meta.color;
+        this.maxHp     = BuffUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = BuffUnit.meta.speed;
+        this.color     = BuffUnit.meta.color;
         this.decDamage = BuffUnit.meta.decDamage;
-        this._buffed  = new Set();
+        this.baseSpeed = BuffUnit.meta.speed;
     }
 
-    update(deltaTime, units) {
-        super.update(deltaTime, units);
+    spawn(waypoints, hpMultiplier = 1, speedMultiplier = 1) {
+        super.spawn(waypoints, hpMultiplier, speedMultiplier);
+        this.baseSpeed = this.speed;
+    }
 
-        if (!this.active || !this.alive) {
-            for (const u of this._buffed) u.damageReduction = 0;
-            this._buffed.clear();
-            return;
+    _matchSpeed(units) {
+        const range2 = BuffUnit.BUFF_RANGE ** 2;
+        let minSpeed = this.baseSpeed;
+        for (const u of units) {
+            if (u === this || !u.active || !u.alive) continue;
+            const dx = u.x - this.x;
+            const dy = u.y - this.y;
+            if (dx * dx + dy * dy <= range2)
+                minSpeed = Math.min(minSpeed, u.speed * (1 - u.slowFactor / 100));
         }
+        this.speed = minSpeed;
+    }
 
-        const range2     = BuffUnit.BUFF_RANGE ** 2;
-        const nowBuffed  = new Set();
-
+    // 매 틱 페이즈 1에서 호출 — 범위 내 아군의 damageReduction 누적 (다중 BuffUnit 가산)
+    _applyBuff(units) {
+        const range2 = BuffUnit.BUFF_RANGE ** 2;
         for (const u of units) {
             if (u === this) continue;
             if (!u.active || !u.alive) continue;
             const dx = u.x - this.x;
             const dy = u.y - this.y;
             if (dx * dx + dy * dy <= range2) {
-                u.damageReduction = this.decDamage;
-                nowBuffed.add(u);
+                u.damageReduction += this.decDamage;
             }
         }
+    }
 
-        for (const u of this._buffed) {
-            if (!nowBuffed.has(u)) u.damageReduction = 0;
-        }
-        this._buffed = nowBuffed;
+    update(deltaTime, units) {
+        if (!this.active || !this.alive) return;
+        this._matchSpeed(units);
+        super.update(deltaTime, units);
     }
 
     draw(ctx) {
@@ -503,6 +526,25 @@ export class BuffUnit extends Unit {
 
         ctx.restore();
         super.draw(ctx);
+    }
+}
+
+export class TauntUnit extends Unit {
+    static meta = {
+        type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
+        color: '#e74c3c',
+        hp: 1100, speed: 100, level: 1,
+        hpPlus: 120, speedPlus: 10,
+        passive: '도발',
+        passiveDesc: '모든 타워가 이 유닛을 우선 공격합니다.',
+    };
+    constructor() {
+        super();
+        this.maxHp    = TauntUnit.meta.hp;
+        this.hp       = this.maxHp;
+        this.speed    = TauntUnit.meta.speed;
+        this.color    = TauntUnit.meta.color;
+        this.taunting = true;
     }
 }
 
@@ -667,29 +709,19 @@ export class SplitUnit extends Unit {
         this.splitNum = SplitUnit.meta.splitNum;
     }
 
-    takeDamage(amount, units, attacker = null) {
-        if (this.shield) { this.shield = false; return; }
-        const actualDamage = amount * (1 - this.damageReduction / 100) * (1 + game.damageTakenBonus / 100);
-        if (!this.isSplit && this.hp - actualDamage <= 0) {
-            this.alive  = false;
-            this.active = false;
-            game.deadCount++;
-            _notifyUnit(this, 'death');
-            shatterEffects.push({
-                x: this.x, y: this.y,
-                timer: 0, duration: 0.5,
-                color: this.color,
-                shards: Array.from({ length: 8 }, (_, i) => ({
-                    angle: (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
-                    speed: 28 + Math.random() * 22,
-                    size:  3 + Math.random() * 2.5,
-                })),
-            });
-            this._spawnChildren(units);
-            checkWaveEnd();
-            return;
-        }
-        super.takeDamage(amount, units, attacker);
+    _onDeath(units) {
+        if (this.isSplit) return;
+        shatterEffects.push({
+            x: this.x, y: this.y,
+            timer: 0, duration: 0.5,
+            color: this.color,
+            shards: Array.from({ length: 8 }, (_, i) => ({
+                angle: (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+                speed: 28 + Math.random() * 22,
+                size:  3 + Math.random() * 2.5,
+            })),
+        });
+        this._spawnChildren(units);
     }
 
     _spawnChildren(units) {
@@ -713,6 +745,7 @@ export class SplitUnit extends Unit {
             child.slowFactor       = this.slowFactor;
             child.isStunned        = this.isStunned;
             child.stunTimer        = this.stunTimer;
+            child.statusImmune     = this.statusImmune;
 
             const targetDist       = Math.max(0, this.distanceTraveled - i * GAP);
             const pos              = SplitUnit._posAt(this.waypoints, targetDist);
@@ -985,7 +1018,7 @@ export class TimeUnit extends Unit {
         hp: 450, speed: 250, level: 1,
         hpPlus: 90, speedPlus: 30, returnPlus: 10,
         passive: '시간역행', returnHp: 60,
-        passiveDesc: (prob) => `사망 직전 체력을 ${prob}% 회복하며 시간을 되돌립니다.`,
+        passiveDesc: (prob) => `사망 직전 체력을 ${prob}% 회복하며 시간을 되돌립니다.\n 시간을 되돌린 후 1초 동안 무적이 됩니다.`,
     };
     constructor() {
         super();
@@ -993,9 +1026,10 @@ export class TimeUnit extends Unit {
         this.hp           = this.maxHp;
         this.speed        = TimeUnit.meta.speed;
         this.color        = TimeUnit.meta.color;
-        this.returnHp     = TimeUnit.meta.returnHp;
-        this.reversed     = false;
-        this.reverseFlash = 0;
+        this.returnHp        = TimeUnit.meta.returnHp;
+        this.reversed        = false;
+        this.reverseFlash    = 0;
+        this.invincibleTimer = 0;
     }
 
     update(deltaTime, units) {
@@ -1003,15 +1037,24 @@ export class TimeUnit extends Unit {
         if (this.reverseFlash > 0) {
             this.reverseFlash = Math.max(0, this.reverseFlash - deltaTime / 600);
         }
+        if (this.invincibleTimer > 0) {
+            this.invincibleTimer = Math.max(0, this.invincibleTimer - deltaTime / 1000);
+        }
     }
 
     takeDamage(amount, units, attacker = null) {
+        if (this.invincibleTimer > 0) return;
         if (this.shield) { this.shield = false; return; }
-        const actualDamage = amount * (1 - this.damageReduction / 100) * (1 + game.damageTakenBonus / 100);
+        const adaptRed = this.adaptReductionPerStack
+            ? Math.min(this.adaptMaxReduction || 0, (this.adaptStacks || 0) * this.adaptReductionPerStack)
+            : 0;
+        const totalReduction = this.damageReduction + (this.proximityBonus || 0) + adaptRed;
+        const actualDamage = amount * (1 - totalReduction / 100) * (1 + game.damageTakenBonus / 100);
         if (!this.reversed && this.hp - actualDamage <= 0) {
-            this.reversed     = true;
-            this.reverseFlash = 1;
-            this.hp           = Math.floor(this.maxHp * (this.returnHp / 100));
+            this.reversed        = true;
+            this.reverseFlash    = 1;
+            this.invincibleTimer = 1.0;
+            this.hp              = Math.floor(this.maxHp * (this.returnHp / 100));
             this._reversePosition(this.distanceTraveled / 2);
             return;
         }
@@ -1039,6 +1082,14 @@ export class TimeUnit extends Unit {
 
     _drawBody(ctx) {
         super._drawBody(ctx);
+        if (this.invincibleTimer > 0) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 80);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 16 + 3 * pulse, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(241, 196, 15, ${0.6 + 0.4 * pulse})`;
+            ctx.lineWidth   = 3;
+            ctx.stroke();
+        }
         if (this.reverseFlash > 0) {
             ctx.beginPath();
             ctx.arc(this.x, this.y, 12 + 8 * (1 - this.reverseFlash), 0, Math.PI * 2);
@@ -1053,8 +1104,8 @@ export const shatterEffects = [];
 
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
-    FlyUnit, ShieldUnit, HealUnit,
-    TauntUnit, BuffUnit, DietUnit, TiredUnit,
+    FlyUnit, ShieldUnit, HealUnit, BuffUnit,
+    TauntUnit, DietUnit, TiredUnit,
     InvisibleUnit, SplitUnit, DashUnit,
     EvadeUnit, TimeUnit,
 ];

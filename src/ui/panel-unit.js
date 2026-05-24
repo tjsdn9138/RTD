@@ -95,10 +95,13 @@ function renderDeploySlots() {
     if (autoRow && autoBtn) {
       autoRow.style.display = 'flex';
       const allSent = game.units.every(u => u.spawned);
-      autoBtn.disabled = allSent;
+      const forced  = game.manualSpawnDisabled;
+      autoBtn.disabled = allSent || forced;
       autoBtn.classList.toggle('auto-on', game.autoSpawn);
-      autoBtn.textContent = game.autoSpawn ? '■  자동 출전 중지' : '▶▶  자동 출전';
-      autoBtn.onclick = () => {
+      autoBtn.textContent = forced
+        ? '■  자동 출전 (강제)'
+        : (game.autoSpawn ? '■  자동 출전 중지' : '▶▶  자동 출전');
+      autoBtn.onclick = forced ? null : () => {
         game.autoSpawn = !game.autoSpawn;
         game.spawnTimer = 0;
         renderDeploySlots();
@@ -111,18 +114,29 @@ function renderDeploySlots() {
       div.dataset.idx = i;
 
       if (!unit.spawned) {
-        div.classList.add('spawn-ready');
-        div.innerHTML = `
-          <div class="slot-ico" style="background:${m.color};"></div>
-          <div class="slot-name">${m.name}</div>
-          <div class="slot-spawn-btn">▶ 출전</div>
-        `;
-        div.addEventListener('mouseenter', () => showPreview({ name: m.name }, m, div));
-        div.addEventListener('mouseleave', () => hidePreview());
-        div.addEventListener('click', () => {
-          document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));
-          renderDeploySlots();
-        });
+        if (game.manualSpawnDisabled) {
+          div.classList.add('spawn-locked');
+          div.innerHTML = `
+            <div class="slot-ico" style="background:${m.color};"></div>
+            <div class="slot-name">${m.name}</div>
+            <div class="slot-sent-label">대기 중</div>
+          `;
+          div.addEventListener('mouseenter', () => showPreview({ name: m.name }, m, div));
+          div.addEventListener('mouseleave', () => hidePreview());
+        } else {
+          div.classList.add('spawn-ready');
+          div.innerHTML = `
+            <div class="slot-ico" style="background:${m.color};"></div>
+            <div class="slot-name">${m.name}</div>
+            <div class="slot-spawn-btn">▶ 출전</div>
+          `;
+          div.addEventListener('mouseenter', () => showPreview({ name: m.name }, m, div));
+          div.addEventListener('mouseleave', () => hidePreview());
+          div.addEventListener('click', () => {
+            document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));
+            renderDeploySlots();
+          });
+        }
       } else {
         div.classList.add('spawn-sent');
         div.innerHTML = `

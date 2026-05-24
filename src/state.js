@@ -131,6 +131,7 @@ export function retryWave() {
     game.pendingItem = null;
     game.waveResult  = null;
     game.state       = STATE.READY;
+    game.goldBonus   = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
 }
 
 // 다음 웨이브로 넘어가기
@@ -142,6 +143,7 @@ export function nextWave() {
     game.waveNumber++;
     game.waveResult  = null;
     game.state       = STATE.READY;
+    game.goldBonus   = 0; // wave 종료 시 잔여값 제거 — 이후 호출되는 getReward()가 깨끗한 값을 반환
 }
 
 // 게임 클리어
@@ -165,10 +167,11 @@ export function addGold(amount) {
 }
 
 // 게임 시작 시 전체 증강 웨이브 미리 생성
-// wave 6부터 5웨이브 단위로 1개 랜덤 선택 (시작점이 항상 5의 배수+1이므로 +0~3 범위는 자동으로 타워 추가 웨이브 제외)
+// wave 9부터 5웨이브 간격 고정 (9, 14, 19, …). 모두 mod 5 = 4 라 타워 추가 웨이브(5의 배수)와 겹치지 않음.
+// HesitationAug의 +3 추가도 mod 5 = 2 가 되어 자동 충돌 회피.
 export function generateAugWaves() {
     game.augWaves = [];
-    for (let start = 6; start < MAX_WAVES; start += 5) {
-        game.augWaves.push(start + Math.floor(Math.random() * 4));
+    for (let w = 9; w < MAX_WAVES; w += 5) {
+        game.augWaves.push(w);
     }
 }

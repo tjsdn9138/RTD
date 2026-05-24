@@ -32,6 +32,18 @@ function pickOneAug(exclude) {
     return weightedPick(pool);
 }
 
+// reroll 가능 여부 사전 검사 — pickOneAug 의 2단계 폴백 풀과 동일 조건
+function _hasRerollPool(exclude) {
+    const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
+    const exclNames  = new Set(exclude.map(Cls => Cls.name));
+    const isFirst    = game.augmentations.length === 0;
+    return AUGMENTATION_CLASSES.some(Cls =>
+        !ownedNames.has(Cls.name) &&
+        !exclNames.has(Cls.name) &&
+        (!Cls.meta.firstOnly || isFirst)
+    );
+}
+
 function pickAugs(exclude = []) {
     const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
     const exclNames  = new Set(exclude.map(Cls => Cls.name));
@@ -85,11 +97,13 @@ function renderCards(choices) {
 
         const rerollItem = inventory.find(i => i.type === 'AugReroll');
         const rerollCount = rerollItem?.count ?? 0;
+        const canReroll = rerollCount > 0 && _hasRerollPool(_seenChoices);
         const refreshBtn = document.createElement('button');
-        refreshBtn.className = 'aug-card-refresh' + (rerollCount > 0 ? '' : ' disabled');
+        refreshBtn.className = 'aug-card-refresh' + (canReroll ? '' : ' disabled');
         refreshBtn.textContent = `↺ x${rerollCount}`;
         refreshBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (!canReroll) return;
             const item = inventory.find(i => i.type === 'AugReroll' && i.count > 0);
             if (!item) return;
             const newAug = pickOneAug(_seenChoices);

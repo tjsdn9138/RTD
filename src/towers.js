@@ -136,8 +136,8 @@ export class NormalTower extends Tower {
 export class HeavyTower extends Tower {
     static meta = {
         name: '한방 타워', rarity: 'COMMON',
-        damage: 400, attackSpeed: 0.6, range: 160,
-        dmgPlus: 60, speedPlus: 0.06, rangePlus: 16,
+        damage: 350, attackSpeed: 0.5, range: 160,
+        dmgPlus: 50, speedPlus: 0.05, rangePlus: 16,
         passive: '지상', passiveDesc: '비행 유닛을 공격할 수 없습니다.',
     };
     constructor(x, y) {
@@ -162,8 +162,8 @@ export class HeavyTower extends Tower {
 export class FastTower extends Tower {
     static meta = {
         name: '빠른 타워', rarity: 'COMMON',
-        damage: 90, attackSpeed: 2, range: 240,
-        dmgPlus: 15, speedPlus: 0.2, rangePlus: 24,
+        damage: 80, attackSpeed: 2, range: 240,
+        dmgPlus: 12, speedPlus: 0.2, rangePlus: 24,
         passive: null, passiveDesc: null,
     };
     constructor(x, y) {
@@ -256,9 +256,11 @@ export class SlowTower extends Tower {
         const target = this._selectTarget(units, { skipFlying: true, prefer: u => !u.isSlowed });
         if (target) {
             target.takeDamage(this.getDamage(target), units, this);
-            target.isSlowed   = true;
-            target.slowTimer  = 1.5;
-            target.slowFactor = SlowTower.meta.slow;
+            if (!target.isStatusImmune()) {
+                target.isSlowed   = true;
+                target.slowTimer  = 1.5;
+                target.slowFactor = SlowTower.meta.slow;
+            }
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
@@ -299,8 +301,10 @@ export class StunTower extends Tower {
 
     _applyStun(target, units) {
         target.takeDamage(this.getDamage(target), units, this);
-        target.isStunned = true;
-        target.stunTimer = 0.1;
+        if (!target.isStatusImmune()) {
+            target.isStunned = true;
+            target.stunTimer = 0.1;
+        }
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
     }
 
@@ -544,9 +548,11 @@ export class PoisonTower extends Tower {
         if (target) {
             const dmg = this.getDamage(target);
             target.takeDamage(dmg, units, this);
-            target.isPoisoned  = true;
-            target.poisonTimer = PoisonTower.meta.poisonTime;
-            target.poisonDps   = dmg;
+            if (!target.isStatusImmune()) {
+                target.isPoisoned  = true;
+                target.poisonTimer = PoisonTower.meta.poisonTime;
+                target.poisonDps   = dmg;
+            }
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
         }
         this._consumeTick(!!target);
@@ -762,21 +768,21 @@ export class AllRoundTower extends Tower {
         }
 
         // 독 타워: 1초 독 (HealUnit에서 독 걸린 유닛 힐량 50% 감소 적용)
-        if (hasPoison && target.alive) {
+        if (hasPoison && target.alive && !target.isStatusImmune()) {
             target.isPoisoned  = true;
             target.poisonTimer = 1;
             target.poisonDps   = this.getDamage(target);
         }
 
         // 슬로우 타워: 1초 슬로우
-        if (hasSlow && target.alive) {
+        if (hasSlow && target.alive && !target.isStatusImmune()) {
             target.isSlowed   = true;
             target.slowTimer  = 1;
             target.slowFactor = SlowTower.meta.slow;
         }
 
         // 기절 타워: 0.05초 기절
-        if (hasStun && target.alive) {
+        if (hasStun && target.alive && !target.isStatusImmune()) {
             target.isStunned = true;
             target.stunTimer = 0.05;
         }

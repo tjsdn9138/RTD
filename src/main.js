@@ -5,7 +5,7 @@ import { initTitleScreen } from './ui/title.js';
 import { STATE, game, inventory, startWave, nextWave, checkWaveEnd, levelUpTower, selectTower, selectRandomTower, MAX_TOWER_LEVEL, generateAugWaves } from './game.js';
 import { getWaypoints, getTowerSlots, drawMap, drawTowerSlots } from './maps/map1.js';
 import { TOWER_CLASS, attackFlashes } from './towers.js';
-import { shatterEffects } from './units.js';
+import { shatterEffects, BuffUnit } from './units.js';
 import { applyPassiveItems } from './items.js';
 import { dispatchAug } from './augmentations.js';
 
@@ -37,14 +37,9 @@ export function relocateTower() {
     }
 }
 
-// 게임 시작 시 첫 타워 생성 (1회)
+// 게임 시작 시 첫 타워 생성 (1회) — 맨 윗줄 오른쪽 끝(인덱스 2) 고정
 function initFirstTower() {
-    const towerRange = new TOWER_CLASS['NormalTower'](0, 0).range;
-    const weights = towerSlots.map(slot => {
-        const cov = getSlotPathCoverage(slot, waypoints, towerRange);
-        return cov > 0 ? 1 / cov : 0;
-    });
-    const idx = pickWeightedIndex(weights);
+    const idx = 2;
     game.towers[idx] = new TOWER_CLASS['NormalTower'](towerSlots[idx].x, towerSlots[idx].y);
 }
 
@@ -151,9 +146,9 @@ window.addEventListener('resize', () => {
     if (!isZoom) resizeCanvas();
 });
 
-// 수동 유닛 출전 (autoSpawn 중엔 차단)
+// 수동 유닛 출전 (autoSpawn 중이거나 수동 출전 차단 상태면 차단)
 document.addEventListener('spawnunit', (e) => {
-    if (game.autoSpawn) return;
+    if (game.autoSpawn || game.manualSpawnDisabled) return;
     e.detail.unit.spawn(waypoints, 1, 1);
     dispatchAug('onUnitSpawn', e.detail.unit, game.units, waypoints);
 });
@@ -190,9 +185,11 @@ document.addEventListener('nextwavestart', () => {
                 });
                 const emptyIdx = emptyIdxList[pickWeightedIndex(weights)];
 
-                // 기존 타워 최솟값 먼저 계산 (새 타워 추가 전)
-                let minTowerLevel = game.towers.reduce((min, t) => t ? Math.min(min, t.level) : min, 100);
-                if (minTowerLevel === 100) minTowerLevel = 1;
+                // 기존 타워 최솟값 먼저 계산 (새 타워 추가 전) — 타워가 없으면 1
+                const existingTowers = game.towers.filter(t => t);
+                const minTowerLevel = existingTowers.length > 0
+                    ? Math.min(...existingTowers.map(t => t.level))
+                    : 1;
                 game.towers[emptyIdx] = new TOWER_CLASS[selectedTower](towerSlots[emptyIdx].x, towerSlots[emptyIdx].y);
                 // 웨이브 비례 타워 레벨업
                 for (let i = 1; i < minTowerLevel; i++) levelUpTower(game.towers[emptyIdx]);
@@ -406,8 +403,10 @@ function gameLoop(timestamp) {
             }
         }
 
-        game.units.forEach(u => { u.proximityBonus = 0; });
+        game.units.forEach(u => { u.proximityBonus = 0; u.damageReduction = 0; });
         dispatchAug('onUpdate', deltaTime, game.units);
+        // BuffUnit 효과 사전 누적 — 타워 공격 시점에 damageReduction 이 반영되도록 페이즈 1에서 처리
+        game.units.forEach(u => { if (u instanceof BuffUnit && u.active && u.alive) u._applyBuff(game.units); });
         game.towers.forEach(t => { if (t) t.update(deltaTime, game.units); });
         game.units.forEach(u => u.update(deltaTime, game.units));
 
@@ -456,8 +455,13 @@ if (sessionStorage.getItem(FRESH_START_KEY)) {
 } else {
     initTitleScreen(
         () => {
+            try {
+                sessionStorage.setItem(FRESH_START_KEY, '1');
+            } catch (e) {
+                alert('브라우저 설정상 새 게임 시작이 불가합니다.\n시크릿 모드 해제 또는 사이트 권한을 확인하세요.');
+                return;
+            }
             deleteSave();
-            sessionStorage.setItem(FRESH_START_KEY, '1');
             location.reload();
         },
         () => { loadGame(); startGame(false); },

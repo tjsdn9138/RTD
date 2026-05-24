@@ -77,7 +77,7 @@ export class CommonCharm extends PassiveItem {
     static meta = {
         name: '일반부적', kind: 'passive', rarity: 'UNCOMMON',
         level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
-        desc: (mul) => `일반 유닛의 체력을 ${mul}배 증가시킵니다.`,
+        desc: (mul) => `일반 등급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
         super('일반부적');
@@ -96,7 +96,7 @@ export class UncommonCharm extends PassiveItem {
     static meta = {
         name: '고급부적', kind: 'passive', rarity: 'UNCOMMON',
         level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
-        desc: (mul) => `고급 유닛의 체력을 ${mul}배 증가시킵니다.`,
+        desc: (mul) => `고급 등급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
         super('고급부적');
@@ -115,7 +115,7 @@ export class RareCharm extends PassiveItem {
     static meta = {
         name: '희귀부적', kind: 'passive', rarity: 'UNCOMMON',
         level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
-        desc: (mul) => `희귀 유닛의 체력을 ${mul}배 증가시킵니다.`,
+        desc: (mul) => `희귀 등급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
         super('희귀부적');
@@ -134,7 +134,7 @@ export class EpicCharm extends PassiveItem {
     static meta = {
         name: '영웅부적', kind: 'passive', rarity: 'UNCOMMON',
         level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
-        desc: (mul) => `영웅 유닛의 체력을 ${mul}배 증가시킵니다.`,
+        desc: (mul) => `영웅 등급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
         super('영웅부적');
@@ -153,7 +153,7 @@ export class LegendCharm extends PassiveItem {
     static meta = {
         name: '전설부적', kind: 'passive', rarity: 'UNCOMMON',
         level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
-        desc: (mul) => `전설 유닛의 체력을 ${mul}배 증가시킵니다.`,
+        desc: (mul) => `전설 등급 유닛의 체력을 ${mul}배 증가시킵니다.`,
     };
     constructor() {
         super('전설부적');

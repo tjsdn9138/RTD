@@ -119,7 +119,7 @@ export function updateHUD() {
     if (i + 1 < game.waveNumber)        bar.classList.add('done');
     else if (i + 1 === game.waveNumber) bar.classList.add('cur');
     else if ((i + 1) % 5 === 0)         bar.classList.add('boss');
-    if (game.augWaves?.includes(i + 1) && i + 1 >= game.waveNumber) bar.classList.add('aug');
+    if (game.augWaves?.includes(i + 1) && i + 1 > game.waveNumber) bar.classList.add('aug');
   });
 
   if (game.state === STATE.READY) {
@@ -269,7 +269,8 @@ export function initUI() {
 
 // 단축키
 document.addEventListener('keydown', e => {
-  if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+  if (e.target.isContentEditable) return;
 
   // Space: 웨이브 시작/다음/재시도
   if (e.code === 'Space') {

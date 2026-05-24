@@ -66,7 +66,7 @@ export function saveGame() {
         totalSurvived:  game.totalSurvived,
         totalGoldSpent: game.totalGoldSpent,
         damageTakenBonus: game.damageTakenBonus,
-        goldBonus: game.goldBonus,
+        // goldBonus 는 wave 동안만 유효한 임시 값이라 save 대상에서 제외 (wavestart에서 0으로 재계산)
         goldBonusPct: game.goldBonusPct,
         augSlots: game.augSlots,
         manualSpawnDisabled: game.manualSpawnDisabled,
@@ -105,7 +105,7 @@ export function loadGame() {
         game.totalSurvived    = data.totalSurvived    ?? 0;
         game.totalGoldSpent   = data.totalGoldSpent   ?? 0;
         game.damageTakenBonus = data.damageTakenBonus ?? 0;
-        game.goldBonus        = data.goldBonus        ?? 0;
+        game.goldBonus        = 0; // wave 동안만 유효 — load 직후엔 항상 0
         game.goldBonusPct     = data.goldBonusPct     ?? 0;
         game.augSlots         = data.augSlots ?? 0;
         game.augWaves   = data.augWaves ?? [];

@@ -77,11 +77,11 @@ export class LifeGambleAug extends Augmentation {
             return;
         }
 
-        const rewards = ['꽝', 'slot', 'gold', 'unitTicket', 'itemTicket', 'levelup'];
+        const rewards = ['miss', 'slot', 'gold', 'unitTicket', 'itemTicket', 'levelup'];
         this.reward   = rewards[Math.floor(Math.random() * rewards.length)];
 
         switch (this.reward) {
-            case '꽝':
+            case 'miss':
                 this.rewardLabel = '결과: 도박을 하다 보면 잃는 때도 있는 법이죠...';
                 break;
             case 'slot':
@@ -542,13 +542,8 @@ export class IndomitableAug extends Augmentation {
         rarity: 'LEGEND',
         desc: '모든 유닛이 모든 상태이상에 면역이 됩니다.',
     }
-    onUpdate(deltaTime, units) {
-        units.forEach(unit => {
-            if (!unit.active || !unit.alive) return;
-            if (unit.isPoisoned) { unit.isPoisoned = false; unit.poisonTimer = 0; unit.poisonDps = 0; }
-            if (unit.isSlowed)   { unit.isSlowed = false; unit.slowTimer = 0; unit.slowFactor = 0; }
-            if (unit.isStunned)  { unit.isStunned = false; unit.stunTimer = 0; }
-        });
+    onWaveStart(units) {
+        units.forEach(unit => { unit.statusImmune = true; });
     }
 }
 
