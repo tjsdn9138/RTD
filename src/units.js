@@ -48,6 +48,7 @@ export class Unit {
         this.shieldBonus = 1; // 받는 보호막 배율 (healBonus와 동일 패턴)
         this.hasteTimer  = 0;
         this.hasteFactor = 0;
+        this.statusDurationMul = 1; // 상태이상 지속 시간 가속 배율 (>1이면 빠르게 소진)
     }
 
     // 유닛 생성
@@ -71,8 +72,10 @@ export class Unit {
             this.healFlash = Math.max(0, this.healFlash - deltaTime / 400);
         }
 
+        const statusDt = (deltaTime / 1000) * this.statusDurationMul;
+
         if (this.isPoisoned) {
-            this.poisonTimer -= deltaTime / 1000;
+            this.poisonTimer -= statusDt;
             if (this.poisonTimer <= 0) {
                 this.isPoisoned  = false;
                 this.poisonTimer = 0;
@@ -84,7 +87,7 @@ export class Unit {
         }
 
         if (this.isSlowed) {
-            this.slowTimer -= deltaTime / 1000;
+            this.slowTimer -= statusDt;
             if (this.slowTimer <= 0) {
                 this.isSlowed   = false;
                 this.slowTimer  = 0;
@@ -101,7 +104,7 @@ export class Unit {
         }
 
         if (this.isStunned) {
-            this.stunTimer -= deltaTime / 1000;
+            this.stunTimer -= statusDt;
             if (this.stunTimer <= 0) {
                 this.isStunned = false;
                 this.stunTimer = 0;

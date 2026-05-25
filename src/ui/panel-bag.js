@@ -75,6 +75,7 @@ function makeCard(itemData) {
         const lv = document.createElement('span');
         lv.className = 'bag-card-level';
         lv.textContent = `Lv.${meta?.level ?? 1}`;
+        lv.style.color = rarity?.color ?? '#4a4a4a';
 
         const prog = document.createElement('span');
         prog.className = 'bag-card-progress';
@@ -130,6 +131,15 @@ function handleActiveUse(itemData, card) {
         return;
     }
     if (itemData.type === 'UnitGachaTicket' || itemData.type === 'ItemGachaTicket') return;
+    if (itemData.type === 'HpPotion') {
+        const inst = new (ITEM_CLASS['HpPotion'])();
+        if (inst.use()) {
+            itemData.count--;
+            saveGame();
+            renderBagPanel(document.getElementById('panel-bag'));
+        }
+        return;
+    }
     if (game.pendingItem === itemData.type) {
         game.pendingItem = null;
         card.classList.remove('selected');

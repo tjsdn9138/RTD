@@ -1,4 +1,5 @@
 import { game } from './state.js';
+import { dispatchAug } from './augmentations.js';
 
 export class Item {
     constructor(name) {
@@ -168,97 +169,19 @@ export class LegendCharm extends PassiveItem {
     }
 }
 
-export class NormalUnitCharm extends PassiveItem {
+export class Vaccine extends PassiveItem {
     static meta = {
-        name: '평범부적', kind: 'passive', rarity: 'RARE',
-        level: 1, multiplier: 1.1, LevelUpPlus: 0.05,
-        desc: (mul) => `평범한넘의 스탯을 ${mul}배 상승시킵니다.`,
+        name: '예방주사', kind: 'passive', rarity: 'LEGEND',
+        level: 1, multiplier: 20, LevelUpPlus: 5,
+        desc: (mul) => `유닛들의 상태이상 지속 시간이 ${mul}% 감소합니다.`,
     };
     constructor() {
-        super('평범부적');
-        this.multiplier = NormalUnitCharm.meta.multiplier;
+        super('예방주사');
+        this.multiplier = Vaccine.meta.multiplier;
     }
-    targetFilter(unit) { return unit.constructor.meta.type === 'NormalUnit'; }
     applyTo(units) {
-        units.forEach(unit => {
-            unit.maxHp = Math.floor(unit.maxHp * this.multiplier);
-            unit.hp    = unit.maxHp;
-            unit.speed = Math.floor(unit.speed * this.multiplier);
-        });
-    }
-}
-
-export class SpeedUnitCharm extends PassiveItem {
-    static meta = {
-        name: '빠른부적', kind: 'passive', rarity: 'RARE',
-        level: 1, multiplier: 1.15, LevelUpPlus: 0.05,
-        desc: (mul) => `빠른넘의 체력을 ${mul}배 상승시킵니다.`,
-    };
-    constructor() {
-        super('빠른부적');
-        this.multiplier = SpeedUnitCharm.meta.multiplier;
-    }
-    targetFilter(unit) { return unit.constructor.meta.type === 'FastUnit'; }
-    applyTo(units) {
-        units.forEach(unit => {
-            unit.maxHp = Math.floor(unit.maxHp * this.multiplier);
-            unit.hp    = unit.maxHp;
-        });
-    }
-}
-
-export class SlowUnitCharm extends PassiveItem {
-    static meta = {
-        name: '느린부적', kind: 'passive', rarity: 'RARE',
-        level: 1, multiplier: 1.05, LevelUpPlus: 0.05,
-        desc: (mul) => `느린넘의 속도를 ${mul}배 상승시킵니다.`,
-    };
-    constructor() {
-        super('느린부적');
-        this.multiplier = SlowUnitCharm.meta.multiplier;
-    }
-    targetFilter(unit) { return unit.constructor.meta.type === 'SlowUnit'; }
-    applyTo(units) {
-        units.forEach(unit => {
-            unit.speed = Math.floor(unit.speed * this.multiplier);
-        });
-    }
-}
-
-export class GuardUnitCharm extends PassiveItem {
-    static meta = {
-        name: '막는부적', kind: 'passive', rarity: 'EPIC',
-        level: 1, multiplier: 2, LevelUpPlus: 0.5,
-        desc: (mul) => `막는넘의 패시브 수치를 ${mul}배 상승시킵니다.`,
-    };
-    constructor() {
-        super('막는부적');
-        this.multiplier = GuardUnitCharm.meta.multiplier;
-    }
-    targetFilter(unit) { return unit.constructor.meta.type === 'GuardUnit'; }
-    applyTo(units) {
-        units.forEach(unit => {
-            unit.defense = Math.floor(unit.defense * this.multiplier);
-        });
-    }
-}
-
-export class TauntUnitCharm extends PassiveItem {
-    static meta = {
-        name: '도발부적', kind: 'passive', rarity: 'EPIC',
-        level: 1, multiplier: 1.2, LevelUpPlus: 0.05,
-        desc: (mul) => `어그로끄는넘의 체력을 ${mul}배 상승시킵니다.`,
-    };
-    constructor() {
-        super('도발부적');
-        this.multiplier = TauntUnitCharm.meta.multiplier;
-    }
-    targetFilter(unit) { return unit.constructor.meta.type === 'TauntUnit'; }
-    applyTo(units) {
-        units.forEach(unit => {
-            unit.maxHp = Math.floor(unit.maxHp * this.multiplier);
-            unit.hp    = unit.maxHp;
-        });
+        const rate = 1 / (1 - Math.min(this.multiplier, 90) / 100);
+        units.forEach(unit => { unit.statusDurationMul = rate; });
     }
 }
 
@@ -325,6 +248,31 @@ export class ItemTicketHero extends ActiveItem {
     }
 }
 
+export class HpPotion extends ActiveItem {
+    static meta = {
+        name: '체력 포션', kind: 'active', rarity: 'EPIC',
+        desc: '모든 유닛들의 체력을 10% 회복합니다.',
+    };
+    constructor() {
+        super('체력 포션');
+    }
+    use() {
+        if (this.used) return false;
+        const targets = game.units.filter(u => u.active && u.alive);
+        if (!targets.length) return false;
+        targets.forEach(unit => {
+            const base   = Math.floor(unit.maxHp * 0.1);
+            const amount = base * (unit.isPoisoned ? 0.5 : 1) * (unit.healBonus ?? 1);
+            const excess = Math.max(0, unit.hp + amount - unit.maxHp);
+            unit.hp = Math.min(unit.maxHp, unit.hp + amount);
+            if (excess > 0) dispatchAug('onUnitHeal', unit, excess);
+            unit.healFlash = 1;
+        });
+        this.used = true;
+        return true;
+    }
+}
+
 export class UnitTicketLegend extends ActiveItem {
     static meta = {
         name: '유닛 뽑기권', kind: 'active', rarity: 'LEGEND',
@@ -375,14 +323,14 @@ export function applyPassiveItems(units, inventory) {
 export const ITEM_CLASSES = [
     SpeedCharm, HpCharm, GoldCharm,
     CommonCharm, UncommonCharm, RareCharm, EpicCharm, LegendCharm,
-    NormalUnitCharm, SpeedUnitCharm, SlowUnitCharm,
-    GuardUnitCharm, TauntUnitCharm,
-    // LEGEND 패시브
+    // RARE 패시브
+    // EPIC 패시브
+    Vaccine,
     TutorialBook, UnitGachaTicket, ItemGachaTicket,
     // COMMON 액티브
     // UNCOMMON 액티브
     AugReroll,
-    UnitTicketHero, ItemTicketHero,
+    UnitTicketHero, ItemTicketHero, HpPotion,
     TowerStop, UnitTicketLegend, ItemTicketLegend,
 ];
 export const ITEM_CLASS = Object.fromEntries(ITEM_CLASSES.map(Cls => [Cls.name, Cls]));
