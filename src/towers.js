@@ -212,8 +212,9 @@ export class InfraredTower extends Tower {
         name: '적외선 타워', rarity: 'UNCOMMON',
         damage: 300, attackSpeed: 0.8, range: 240,
         dmgPlus: 45, speedPlus: 0.08, rangePlus: 24,
-        passive: '적외선',
-        passiveDesc: '은신한 유닛을 공격할 수 있고, 은신한 유닛을 우선 공격합니다.',
+        passive: ['적외선', '관통'], penetrateMul: 1.5,
+        passiveDesc: ['은신한 유닛을 공격할 수 있고, 은신한 유닛을 우선 공격합니다.',
+            '보호막을 가진 유닛 공격 시 데미지가 1.5배 증가합니다.'],
     };
     constructor(x, y) {
         super(x, y);
@@ -221,6 +222,11 @@ export class InfraredTower extends Tower {
         this.range       = InfraredTower.meta.range;
         this.attackSpeed = InfraredTower.meta.attackSpeed;
         this.color       = '#922b21';
+    }
+
+    getDamage(target) {
+        const mul = (target.shieldHp > 0) ? InfraredTower.meta.penetrateMul : 1;
+        return this.damage * mul * this._buffMul();
     }
 
     update(deltaTime, units) {
@@ -270,8 +276,8 @@ export class SlowTower extends Tower {
 export class StunTower extends Tower {
     static meta = {
         name: '기절 타워', rarity: 'UNCOMMON',
-        damage: 80, attackSpeed: 1.3, range: 240,
-        dmgPlus: 12, speedPlus: 0.13, rangePlus: 24,
+        damage: 80, attackSpeed: 1.2, range: 240,
+        dmgPlus: 12, speedPlus: 0.12, rangePlus: 24,
         passive: ['일타쌍피', '기절'],
         passiveDesc: ['공격 시 두 명의 유닛을 동시에 공격합니다.',
             '피격 받은 유닛을 잠깐 동안 멈춥니다.'],
@@ -303,7 +309,7 @@ export class StunTower extends Tower {
         target.takeDamage(this.getDamage(target), units, this);
         if (!target.isStatusImmune()) {
             target.isStunned = true;
-            target.stunTimer = 0.1;
+            target.stunTimer = 0.2;
         }
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
     }
@@ -357,8 +363,9 @@ export class ChainTower extends Tower {
         name: '전이 타워', rarity: 'RARE',
         damage: 150, attackSpeed: 0.7, range: 160,
         dmgPlus: 30, speedPlus: 0.07, rangePlus: 16,
-        passive: '전이', decDamage: 75,
-        passiveDesc: (dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
+        passive: ['전이', '관통'], decDamage: 75, penetrateMul: 1.5,
+        passiveDesc: [(dec) => `공격이 근처 적에게 ${dec}% 감소된 피해로 전이됩니다. (최대 4회)`,
+            '보호막을 가진 유닛 공격 시 데미지가 1.5배 증가합니다.'],
     };
 
     static CHAIN_MAX   = 4;
@@ -369,6 +376,11 @@ export class ChainTower extends Tower {
         this.range       = ChainTower.meta.range;
         this.attackSpeed = ChainTower.meta.attackSpeed;
         this.color       = '#00bcd4';
+    }
+
+    getDamage(target) {
+        const mul = (target.shieldHp > 0) ? ChainTower.meta.penetrateMul : 1;
+        return this.damage * mul * this._buffMul();
     }
 
     update(deltaTime, units) {
@@ -383,9 +395,10 @@ export class ChainTower extends Tower {
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25, lineWidth: 3, dotRadius: 6, glow: true });
         attackFlashes.push({ ring: true, x: target.x, y: target.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
 
-        // 전이 체인
+        // 전이 체인 — 체인 기저는 rawDmg(보호막 배율 제외)로 계산, 각 타겟이 독립적으로 보호막 보너스 적용
+        const rawDmg = this.damage * this._buffMul();
         let prev        = target;
-        let chainDamage = baseDmg * 0.5;
+        let chainDamage = rawDmg * 0.5;
 
         for (let i = 0; i < ChainTower.CHAIN_MAX; i++) {
             const prevProgress = this.getProgress(prev);
@@ -410,7 +423,8 @@ export class ChainTower extends Tower {
             const lineWidth = 3 - i * 0.5;
             const dotRadius = 5 - i * 0.8;
             hit.add(next);
-            next.takeDamage(chainDamage, units, this);
+            const dmgToNext = (next.shieldHp > 0) ? chainDamage * ChainTower.meta.penetrateMul : chainDamage;
+            next.takeDamage(dmgToNext, units, this);
             attackFlashes.push({ x1: prev.x, y1: prev.y, x2: next.x, y2: next.y, color: this.color, timer: 0, duration: 0.3, lineWidth, dotRadius, glow: true });
             attackFlashes.push({ ring: true, x: next.x, y: next.y, maxRadius: this.range * 2, color: this.color, timer: 0, duration: 0.35 });
 
@@ -475,7 +489,7 @@ export class SniperTower extends Tower {
         damage: 1000, attackSpeed: 0.2, range: 400,
         dmgPlus: 150, speedPlus: 0.02, rangePlus: 40,
         passive: '저격',
-        passiveDesc: '체력이 가장 낮은 적을 우선 공격하며,\nHP 10% 이하의 적을 즉시 처형합니다.',
+        passiveDesc: '체력이 가장 낮은 유닛을 우선 공격하며, 보호막을 무시합니다.\n공격 받는 유닛의 HP가 10% 이하일 시 즉시 처형합니다.',
     };
     constructor(x, y) {
         super(x, y);
@@ -513,11 +527,15 @@ export class SniperTower extends Tower {
         target = tauntTarget ?? target;
 
         if (target) {
+            const savedShield = target.shieldHp;
+            target.shieldHp = 0;
             target.takeDamage(this.getDamage(target), units, this);
+            if (target.alive) target.shieldHp = savedShield;
             attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.4 });
 
             // 체력 10% 이하면 즉시 처형 (살아있는 경우에만)
             if (target.alive && target.hp / target.maxHp <= 0.1) {
+                target.shieldHp = 0;
                 target.takeDamage(target.hp, units, this);
             }
         }
@@ -693,6 +711,7 @@ export class AllRoundTower extends Tower {
         let mul = 1;
         if (others.some(t => t instanceof SkyTower)      && target.isFlying)    mul *= 1.2;
         if (others.some(t => t instanceof InfraredTower) && target.isInvisible) mul *= 1.2;
+        if ((others.some(t => t instanceof InfraredTower) || others.some(t => t instanceof ChainTower)) && target.shieldHp > 0) mul *= 1.2;
         return this.damage * mul * this._buffMul();
     }
 
@@ -750,7 +769,14 @@ export class AllRoundTower extends Tower {
         }
 
         const dmg = this.getDamage(target) * (hasInferno ? this.burnMul : 1);
-        target.takeDamage(dmg, units, this);
+        if (hasSniper) {
+            const savedShield = target.shieldHp;
+            target.shieldHp = 0;
+            target.takeDamage(dmg, units, this);
+            if (target.alive) target.shieldHp = savedShield;
+        } else {
+            target.takeDamage(dmg, units, this);
+        }
         if (hasInferno) this.burnMul *= 1.05;
 
         attackFlashes.push({ x1: this.x, y1: this.y, x2: target.x, y2: target.y, color: this.color, timer: 0, duration: 0.25 });
@@ -810,8 +836,9 @@ export class AllRoundTower extends Tower {
             }
         }
 
-        // 저격 타워: 체력 5% 이하 즉시 처형
+        // 저격 타워: 체력 5% 이하 즉시 처형 (보호막 무시)
         if (hasSniper && target.alive && target.hp / target.maxHp <= 0.05) {
+            target.shieldHp = 0;
             target.takeDamage(target.hp, units, this);
         }
 

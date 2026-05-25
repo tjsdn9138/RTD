@@ -142,6 +142,9 @@ export function levelUpUnit(type) {
         if ('dashMinus' in meta) {
             meta.dashTime = Math.max(0.1, parseFloat((meta.dashTime - meta.dashMinus).toFixed(2)));
         }
+        if ('barPlus' in meta) {
+            meta.barrier += meta.barPlus;
+        }
     }
 
     return true;

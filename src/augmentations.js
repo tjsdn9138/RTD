@@ -20,6 +20,8 @@ export class Augmentation {
     onUnitSurvive(unit, units) {}
     onUnitDeath(unit, units) {}
     onUnitSpawn(unit, units, waypoints) {}
+    onUnitHeal(unit, excess) {}
+    onUnitHit(unit) {}
 }
 
 export class ChangePosAug extends Augmentation {
@@ -161,6 +163,37 @@ export class HesitationAug extends Augmentation {
     }
 }
 
+export class SmallHopeAug extends Augmentation {
+    static meta = {
+        name: '작은 희망',
+        rarity: 'COMMON',
+        desc: '10% 확률로 무작위 전설 등급 증강을 획득합니다.',
+    }
+    constructor() {
+        super();
+        this.rewardLabel = null;
+    }
+    onAcquire() {
+        if (Math.random() >= 0.1) {
+            this.rewardLabel = '결과: 때론 희망이라 믿었던 것이 본인을 더욱 힘들게 만들고 있었을지도 모릅니다...';
+            return;
+        }
+        const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
+        const pool = AUGMENTATION_CLASSES.filter(Cls =>
+            Cls.meta.rarity === 'LEGEND' && !ownedNames.has(Cls.name)
+        );
+        if (!pool.length) {
+            this.rewardLabel = '결과: 획득할 수 있는 전설 증강이 없습니다.';
+            return;
+        }
+        const Cls = pool[Math.floor(Math.random() * pool.length)];
+        const aug = new Cls();
+        game.augmentations.push(aug);
+        aug.onAcquire();
+        this.rewardLabel = `결과: ${Cls.meta.name} 획득`;
+    }
+}
+
 export class TooManyIAug extends Augmentation {
     static meta = {
         name: '인해전술 I',
@@ -220,14 +253,17 @@ export class GoldGoblinIAug extends Augmentation {
     }
 }
 
-export class FirstAidKitAug extends Augmentation {
+export class FirstAidKitIAug extends Augmentation {
     static meta = {
-        name: '구급 상자',
+        name: '구급 상자 I',
         rarity: 'UNCOMMON',
-        desc: '유닛들이 받는 회복량이 20% 증가합니다.',
+        desc: '유닛들이 받는 회복량과 보호막이 20% 증가합니다.',
     }
     onWaveStart(units) {
-        units.forEach(unit => { unit.healBonus = (unit.healBonus ?? 1) * 1.2; });
+        units.forEach(unit => {
+            unit.healBonus   = (unit.healBonus   ?? 1) * 1.2;
+            unit.shieldBonus = (unit.shieldBonus ?? 1) * 1.2;
+        });
     }
 }
 
@@ -331,7 +367,7 @@ export class LastStandingAug extends Augmentation {
     static meta = {
         name: '최후의 저항',
         rarity: 'RARE',
-        desc: '마지막으로 살아남은 유닛의 받는 피해량이 10% 감소합니다.',
+        desc: '마지막으로 살아남은 유닛의 받는 피해량이 20% 감소합니다.',
     }
     constructor() {
         super();
@@ -353,6 +389,48 @@ export class LastStandingAug extends Augmentation {
     }
 }
 
+export class RandomAug extends Augmentation {
+    static meta = {
+        name: '무작위 증강',
+        rarity: 'RARE',
+        desc: '무작위 증강을 획득합니다.',
+    }
+    constructor() {
+        super();
+        this.rewardLabel = null;
+    }
+    onAcquire() {
+        const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
+        const pool = AUGMENTATION_CLASSES.filter(Cls =>
+            Cls !== RandomAug && !ownedNames.has(Cls.name)
+        );
+        if (!pool.length) {
+            this.rewardLabel = '결과: 획득할 수 있는 증강이 없습니다.';
+            return;
+        }
+        const rarities = [...new Set(pool.map(Cls => Cls.meta.rarity))];
+        const rarity   = rarities[Math.floor(Math.random() * rarities.length)];
+        const candidates = pool.filter(Cls => Cls.meta.rarity === rarity);
+        const Cls = candidates[Math.floor(Math.random() * candidates.length)];
+        const aug = new Cls();
+        game.augmentations.push(aug);
+        aug.onAcquire();
+        this.rewardLabel = `결과: ${Cls.meta.name} 획득`;
+    }
+}
+
+export class ATMAug extends Augmentation {
+    static meta = {
+        name: 'ATM',
+        rarity: 'RARE',
+        desc: '유닛 피격 시 유닛 최대 체력의 10%만큼 골드를 획득합니다.',
+    }
+    onUnitHit(unit) {
+        const gold = Math.floor(unit.maxHp * 10 / 100);
+        if (gold > 0) addGold(gold);
+    }
+}
+
 export class TooManyIIIAug extends Augmentation {
     static meta = {
         name: '인해전술 III',
@@ -365,17 +443,6 @@ export class TooManyIIIAug extends Augmentation {
         game.unitSlots += TooManyIIIAug.meta.slots;
         game.augSlots  += TooManyIIIAug.meta.slots;
         game.damageTakenBonus += TooManyIIIAug.meta.dmgTakenBonus;
-    }
-}
-
-export class BarrierAug extends Augmentation {
-    static meta = {
-        name: '주문 보호막',
-        rarity: 'EPIC',
-        desc: '유닛 전체가 피해를 한번 막을 수 있는 보호막을 가지고 웨이브를 시작합니다.',
-    }
-    onWaveStart(units) {
-        units.forEach(unit => { unit.shield = true; });
     }
 }
 
@@ -400,7 +467,7 @@ export class SoloLevelingAug extends Augmentation {
         game.unitSlots = 1;
         units.splice(1); // 1번 슬롯부터 제거해 실제로 1유닛만 출전
         units.forEach(unit => {
-            unit.maxHp *= 4;
+            unit.maxHp *= 3;
             unit.hp = unit.maxHp;
             unit.soloRegen = true;
         });
@@ -468,6 +535,37 @@ export class MoraleBoostAug extends Augmentation {
             if (!u.active || !u.alive || u === unit) return;
             u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.1 * (u.healBonus ?? 1));
         });
+    }
+}
+
+export class FirstAidKitIIAug extends Augmentation {
+    static meta = {
+        name: '구급 상자 II',
+        rarity: 'EPIC',
+        desc: '유닛들이 받는 회복량과 보호막이 50% 증가합니다.',
+    }
+    onWaveStart(units) {
+        units.forEach(unit => {
+            unit.healBonus   = (unit.healBonus   ?? 1) * 1.5;
+            unit.shieldBonus = (unit.shieldBonus ?? 1) * 1.5;
+        });
+    }
+}
+
+export class ManyGoodAug extends Augmentation {
+    static meta = {
+        name: '다다익선',
+        rarity: 'EPIC',
+        desc: '유닛들이 체력 회복 초과분을 보호막으로 얻습니다. (최대 20%)',
+    }
+    onWaveStart(units) {
+        units.forEach(unit => {
+            unit.shieldMax = Math.floor(unit.maxHp * 0.2);
+        });
+    }
+    onUnitHeal(unit, excess) {
+        if (unit.shieldMax <= 0) return;
+        unit.shieldHp = Math.min(unit.shieldMax, unit.shieldHp + excess * (unit.shieldBonus ?? 1));
     }
 }
 
@@ -547,12 +645,38 @@ export class IndomitableAug extends Augmentation {
     }
 }
 
+export class BarrierAug extends Augmentation {
+    static meta = {
+        name: '주문 보호막',
+        rarity: 'LEGEND',
+        desc: '유닛 전체가 피해를 한번 막을 수 있는 보호막을 가지고 웨이브를 시작합니다.',
+    }
+    onWaveStart(units) {
+        units.forEach(unit => { unit.shield = true; });
+    }
+}
+
+export class RevengeAug extends Augmentation {
+    static meta = {
+        name: '복수',
+        rarity: 'LEGEND',
+        desc: '유닛 사망 시 다른 유닛들의 속도가 1초간 20% 증가합니다. (중첩 X)',
+    }
+    onUnitDeath(unit, units) {
+        units.forEach(u => {
+            if (!u.active || !u.alive || u === unit) return;
+            u.hasteTimer  = 1.0;
+            u.hasteFactor = 20;
+        });
+    }
+}
+
 export const AUGMENTATION_CLASSES = [
-    ChangePosAug, AutoOnlyAug, LifeGambleAug, HesitationAug,
-    TooManyIAug, FastAug, TogetherIAug, GoldGoblinIAug, FirstAidKitAug, InterestAug,
-    TooManyIIAug, AdaptIAug, TogetherIIAug, GoldGoblinIIAug, VanguardAug, LastStandingAug,
-    TooManyIIIAug, BarrierAug, SoloLevelingAug, AdaptIIAug, SacrificeAug, MoraleBoostAug,
-    TooManyIVAug, AuthorityAug, ShadowAug, IndomitableAug,
+    ChangePosAug, AutoOnlyAug, LifeGambleAug, HesitationAug, SmallHopeAug,
+    TooManyIAug, FastAug, TogetherIAug, GoldGoblinIAug, FirstAidKitIAug, InterestAug,
+    TooManyIIAug, AdaptIAug, TogetherIIAug, GoldGoblinIIAug, VanguardAug, LastStandingAug, RandomAug, ATMAug,
+    TooManyIIIAug, SoloLevelingAug, AdaptIIAug, SacrificeAug, MoraleBoostAug, FirstAidKitIIAug, ManyGoodAug,
+    TooManyIVAug, AuthorityAug, ShadowAug, IndomitableAug, BarrierAug, RevengeAug,
 ];
 export const AUGMENTATION_CLASS = Object.fromEntries(
     AUGMENTATION_CLASSES.map(Cls => [Cls.name, Cls])

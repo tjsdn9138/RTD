@@ -225,17 +225,17 @@ export class SlowUnitCharm extends PassiveItem {
     }
 }
 
-export class ShieldUnitCharm extends PassiveItem {
+export class GuardUnitCharm extends PassiveItem {
     static meta = {
-        name: '방패부적', kind: 'passive', rarity: 'EPIC',
+        name: '막는부적', kind: 'passive', rarity: 'EPIC',
         level: 1, multiplier: 2, LevelUpPlus: 0.5,
-        desc: (mul) => `방패든넘의 패시브 수치를 ${mul}배 상승시킵니다.`,
+        desc: (mul) => `막는넘의 패시브 수치를 ${mul}배 상승시킵니다.`,
     };
     constructor() {
-        super('방패부적');
-        this.multiplier = ShieldUnitCharm.meta.multiplier;
+        super('막는부적');
+        this.multiplier = GuardUnitCharm.meta.multiplier;
     }
-    targetFilter(unit) { return unit.constructor.meta.type === 'ShieldUnit'; }
+    targetFilter(unit) { return unit.constructor.meta.type === 'GuardUnit'; }
     applyTo(units) {
         units.forEach(unit => {
             unit.defense = Math.floor(unit.defense * this.multiplier);
@@ -376,7 +376,7 @@ export const ITEM_CLASSES = [
     SpeedCharm, HpCharm, GoldCharm,
     CommonCharm, UncommonCharm, RareCharm, EpicCharm, LegendCharm,
     NormalUnitCharm, SpeedUnitCharm, SlowUnitCharm,
-    ShieldUnitCharm, TauntUnitCharm,
+    GuardUnitCharm, TauntUnitCharm,
     // LEGEND 패시브
     TutorialBook, UnitGachaTicket, ItemGachaTicket,
     // COMMON 액티브

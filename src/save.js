@@ -42,6 +42,7 @@ export function saveGame() {
             if ('returnHp'  in m) e.returnHp  = m.returnHp;
             if ('splitNum'  in m) e.splitNum  = m.splitNum;
             if ('dashTime'  in m) e.dashTime  = m.dashTime;
+            if ('barrier'   in m) e.barrier   = m.barrier;
             return e;
         }),
 
@@ -170,6 +171,7 @@ export function loadGame() {
             if ('returnHp'  in saved) m.returnHp  = saved.returnHp;
             if ('splitNum'  in saved) m.splitNum  = saved.splitNum;
             if ('dashTime'  in saved) m.dashTime  = saved.dashTime;
+            if ('barrier'   in saved) m.barrier   = saved.barrier;
         });
 
         // 보유 유닛 개수 복원

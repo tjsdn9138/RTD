@@ -23,6 +23,7 @@ const PASSIVE_STAT_KEYS = [
     { key: 'returnHp',  nextId: 'next-returnhp', next: m => Math.min(100, m.returnHp + m.returnPlus)                                            },
     { key: 'splitNum',  nextId: 'next-splitnum', next: m => m.splitNum  + m.splitPlus                                                          },
     { key: 'dashTime',  nextId: 'next-dashtime', next: m => Math.max(0.1, parseFloat((m.dashTime - m.dashMinus).toFixed(2)))                    },
+    { key: 'barrier',   nextId: 'next-barrier',  next: m => m.barrier + m.barPlus                                                                },
 ];
 
 const STAT_MARKER = '\x01STAT\x01';
