@@ -11,7 +11,7 @@ export const game = {
     state: STATE.READY,
     waveNumber: 1,
     lives: 3,
-    gold: 100000,
+    gold: 1000,
     unitSlots: 2,
     boughtSlots: 0,
     spawnTimer: 0,
