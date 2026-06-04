@@ -43,6 +43,10 @@ export function saveGame() {
             if ('splitNum'  in m) e.splitNum  = m.splitNum;
             if ('dashTime'  in m) e.dashTime  = m.dashTime;
             if ('barrier'   in m) e.barrier   = m.barrier;
+            if ('maxHpPlus' in m) e.maxHpPlus = m.maxHpPlus;
+            if ('reduction' in m) e.reduction = m.reduction;
+            if ('ignoreNum' in m) e.ignoreNum = m.ignoreNum;
+            if ('stopTime'  in m) e.stopTime  = m.stopTime;
             return e;
         }),
 
@@ -71,6 +75,11 @@ export function saveGame() {
         goldBonusPct: game.goldBonusPct,
         augSlots: game.augSlots,
         manualSpawnDisabled: game.manualSpawnDisabled,
+        nextWaveRewardMul: game.nextWaveRewardMul,
+        failGoldMul:       game.failGoldMul,
+        waveRewardMul:     game.waveRewardMul,
+        contractDone:      game.contractDone,
+        rightLikeActive:   game.rightLikeActive,
         augWaves: game.augWaves,
         augPending: game.augPending,
         augChoices: game.augChoices,
@@ -121,6 +130,11 @@ export function loadGame() {
         game.goldBonus        = 0; // wave 동안만 유효 — load 직후엔 항상 0
         game.goldBonusPct     = data.goldBonusPct     ?? 0;
         game.augSlots         = data.augSlots ?? 0;
+        game.nextWaveRewardMul = data.nextWaveRewardMul ?? 1;
+        game.failGoldMul     = data.failGoldMul     ?? 1;
+        game.waveRewardMul   = data.waveRewardMul   ?? 1;
+        game.contractDone    = data.contractDone    ?? false;
+        game.rightLikeActive = data.rightLikeActive ?? false;
         game.augWaves   = data.augWaves ?? [];
         game.augPending = data.augPending ?? false;
         game.augChoices = data.augChoices ?? [];
@@ -172,6 +186,10 @@ export function loadGame() {
             if ('splitNum'  in saved) m.splitNum  = saved.splitNum;
             if ('dashTime'  in saved) m.dashTime  = saved.dashTime;
             if ('barrier'   in saved) m.barrier   = saved.barrier;
+            if ('maxHpPlus' in saved) m.maxHpPlus = saved.maxHpPlus;
+            if ('reduction' in saved) m.reduction = saved.reduction;
+            if ('ignoreNum' in saved) m.ignoreNum = saved.ignoreNum;
+            if ('stopTime'  in saved) m.stopTime  = saved.stopTime;
         });
 
         // 보유 유닛 개수 복원

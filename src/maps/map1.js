@@ -169,6 +169,16 @@ export function drawTowerSlots(ctx, slots, towers) {
                 ctx.stroke();
             }
 
+            // 방해 효과 (jamTimer > 0)
+            if (tower.jamTimer > 0) {
+                const t = tower.jamTimer / 0.3;
+                ctx.fillStyle = `rgba(186, 220, 88, ${0.35 * t})`;
+                ctx.fillRect(slot.x - innerSize/2, slot.y - innerSize/2, innerSize, innerSize);
+                ctx.strokeStyle = `rgba(186, 220, 88, ${0.9 * t})`;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(slot.x - innerSize/2, slot.y - innerSize/2, innerSize, innerSize);
+            }
+
             // 사거리 표시
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 1.5;

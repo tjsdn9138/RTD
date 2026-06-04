@@ -416,6 +416,13 @@ function gameLoop(timestamp) {
         dispatchAug('onUpdate', deltaTime, game.units);
         // BuffUnit 효과 사전 누적 — 타워 공격 시점에 damageReduction 이 반영되도록 페이즈 1에서 처리
         game.units.forEach(u => { if (u instanceof BuffUnit && u.active && u.alive) u._applyBuff(game.units); });
+        // 유닛 자체 패시브 사전 누적 — _applyPassive 를 정의한 유닛만 호출 (TogetherUnit 등)
+        game.units.forEach(u => { if (u.active && u.alive && u._applyPassive) u._applyPassive(game.units); });
+        game.towers.forEach(t => {
+            if (!t || t.smokeTimer <= 0) return;
+            t.smokeTimer -= deltaTime / 1000;
+            if (t.smokeTimer <= 0) { t.range = t.smokeBaseRange; t.smokeTimer = 0; }
+        });
         game.towers.forEach(t => { if (t) t.update(deltaTime, game.units); });
         game.units.forEach(u => u.update(deltaTime, game.units));
 

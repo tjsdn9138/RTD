@@ -138,12 +138,27 @@ function renderDeploySlots() {
           });
         }
       } else {
-        div.classList.add('spawn-sent');
-        div.innerHTML = `
-          <div class="slot-ico" style="background:${m.color};"></div>
-          <div class="slot-name">${m.name}</div>
-          <div class="slot-sent-label">출전됨</div>
-        `;
+        const canStop = typeof unit.stop === 'function' && !unit.isStopped && unit.active && unit.alive;
+        if (canStop) {
+          div.classList.add('spawn-ready');
+          div.innerHTML = `
+            <div class="slot-ico" style="background:${m.color};"></div>
+            <div class="slot-name">${m.name}</div>
+            <div class="slot-spawn-btn">■ 정지</div>
+          `;
+          div.addEventListener('click', () => {
+            unit.stop();
+            renderDeploySlots();
+          });
+        } else {
+          div.classList.add('spawn-sent');
+          const stoppedLabel = unit.isStopped ? '■ 정지됨' : '출전됨';
+          div.innerHTML = `
+            <div class="slot-ico" style="background:${m.color};"></div>
+            <div class="slot-name">${m.name}</div>
+            <div class="slot-sent-label">${stoppedLabel}</div>
+          `;
+        }
       }
       grid.appendChild(div);
     });

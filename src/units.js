@@ -72,6 +72,10 @@ export class Unit {
             this.healFlash = Math.max(0, this.healFlash - deltaTime / 400);
         }
 
+        if (this.invincibleTimer > 0) {
+            this.invincibleTimer = Math.max(0, this.invincibleTimer - deltaTime / 1000);
+        }
+
         const statusDt = (deltaTime / 1000) * this.statusDurationMul;
 
         if (this.isPoisoned) {
@@ -144,6 +148,7 @@ export class Unit {
 
     // 피격 시 데미지 계산
     takeDamage(amount, units, attacker = null) {
+        if (this.invincibleTimer > 0) return;
         if (this.shield) { this.shield = false; return; }
         if (attacker !== null) {
             if (attacker === this.lastAttacker) {
@@ -172,6 +177,7 @@ export class Unit {
             game.deadCount++;
             if (!this.isSplit) _notifyUnit(this, 'death');
             dispatchAug('onUnitDeath', this, units);
+            units.forEach(u => { if (u.active && u.alive) u.onAllyDeath(this, units); });
             this._onDeath(units);
             checkWaveEnd();
         }
@@ -179,6 +185,9 @@ export class Unit {
 
     // 사망 직후 훅 — checkWaveEnd 이전 호출. 자식 유닛 스폰 등 사망 후 처리에 사용.
     _onDeath(units) {}
+
+    // 아군 사망 알림 훅 — takeDamage에서 유닛 사망 시 살아있는 모든 아군에게 호출.
+    onAllyDeath(deadUnit, units) {}
 
     // 상태이상 면역 여부 — 부여 측에서 호출. 영구 면역(statusImmune) + 일시 무적(invincibleTimer/isDashing) 통합.
     isStatusImmune() {
@@ -447,6 +456,7 @@ export class HealUnit extends Unit {
             if (u === this) continue;
             if (!u.active || !u.alive) continue;
             if (u.hp >= u.maxHp) continue;
+            if (u.noHeal) continue;
             const dx = u.x - this.x;
             const dy = u.y - this.y;
             if (dx * dx + dy * dy > range2) continue;
@@ -584,6 +594,61 @@ export class ShieldUnit extends Unit {
     }
 }
 
+
+
+export class StopUnit extends Unit {
+    static meta = {
+        type: 'StopUnit', name: '멈추는넘', rarity: 'UNCOMMON',
+        color: '#00bcd4',
+        hp: 400, speed: 180, level: 1,
+        hpPlus: 40, speedPlus: 12,
+        passive: '정지',
+        passiveDesc: '소환 후 같은 키를 다시 누르면 그 자리에 멈춥니다.',
+    };
+
+    constructor() {
+        super();
+        this.maxHp     = StopUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = StopUnit.meta.speed;
+        this.color     = StopUnit.meta.color;
+        this.isStopped = false;
+        this.baseSpeed = StopUnit.meta.speed;
+    }
+
+    spawn(waypoints, hpMul = 1, spdMul = 1) {
+        super.spawn(waypoints, hpMul, spdMul);
+        this.baseSpeed = this.speed;
+    }
+
+    stop() {
+        this.isStopped = true;
+    }
+
+    update(deltaTime, units) {
+        if (this.isStopped) {
+            const saved = this.speed;
+            this.speed = 0;
+            super.update(deltaTime, units);
+            this.speed = saved;
+            return;
+        }
+        super.update(deltaTime, units);
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        if (this.isStopped) {
+            const pulse = 0.5 + 0.5 * Math.sin(game.time / 200);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 14 + 2 * pulse, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, 0.5 + 0.3 * pulse);
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+    }
+}
+
 export class TauntUnit extends Unit {
     static meta = {
         type: 'TauntUnit', name: '어그로끄는넘', rarity: 'RARE',
@@ -693,6 +758,72 @@ export class TiredUnit extends Unit {
             ctx.lineWidth   = 2.5;
             ctx.stroke();
         }
+    }
+}
+
+export class SelfBombUnit extends Unit {
+    static meta = {
+        type: 'SelfBombUnit', name: '자폭하는넘', rarity: 'RARE',
+        color: '#c0392b',
+        hp: 200, speed: 300, level: 1,
+        hpPlus: 40, speedPlus: 15, timePlus: -0.2,
+        passive: ['자폭', '동료'], time: 1,
+        passiveDesc: [(t) => `사망 시 주변 유닛을 ${t}초간 기절시킵니다.`,
+            '유닛 소환 시 동일한 유닛이 한 마리 더 소환됩니다.'],
+    };
+
+    constructor() {
+        super();
+        this.maxHp = SelfBombUnit.meta.hp;
+        this.hp    = this.maxHp;
+        this.speed = SelfBombUnit.meta.speed;
+        this.color = SelfBombUnit.meta.color;
+        this.time  = SelfBombUnit.meta.time;
+    }
+
+    spawn(waypoints, hpMul = 1, spdMul = 1) {
+        super.spawn(waypoints, hpMul, spdMul);
+        if (this._isClone) return;
+        const GAP           = 25;
+        const clone         = new SelfBombUnit();
+        clone._isClone      = true;
+        const pos           = SplitUnit._posAt(waypoints, GAP);
+        clone.waypoints     = waypoints;
+        clone.x             = pos.x;
+        clone.y             = pos.y;
+        clone.waypointIndex = pos.waypointIndex;
+        clone.distanceTraveled = pos.dist;
+        clone.alive         = true;
+        clone.active        = true;
+        clone.spawned       = true;
+        clone.maxHp         = this.maxHp;
+        clone.hp            = clone.maxHp;
+        clone.speed         = this.speed;
+        clone.time          = this.time;
+        game.units.push(clone);
+        dispatchAug('onUnitSpawn', clone, game.units);
+    }
+
+    _onDeath(units) {
+        const R = 80;
+        units.forEach(u => {
+            if (!u.active || !u.alive) return;
+            const dx = u.x - this.x, dy = u.y - this.y;
+            if (dx * dx + dy * dy <= R * R && !u.isStatusImmune()) {
+                u.isStunned = true;
+                u.stunTimer = Math.max(u.stunTimer, this.time);
+            }
+        });
+        shatterEffects.push({
+            x: this.x, y: this.y,
+            timer: 0, duration: 0.4,
+            color: this.color,
+            shards: Array.from({ length: 12 }, (_, i) => ({
+                angle: (i / 12) * Math.PI * 2,
+                speed: 35 + Math.random() * 30,
+                size:  2.5 + Math.random() * 2,
+            })),
+        });
     }
 }
 
@@ -949,6 +1080,7 @@ export class DashUnit extends Unit {
 
         if (this.healFlash > 0) this.healFlash = Math.max(0, this.healFlash - deltaTime / 400);
         if (this.dashFlash > 0) this.dashFlash = Math.max(0, this.dashFlash - deltaTime / 300);
+        if (this.invincibleTimer > 0) this.invincibleTimer = Math.max(0, this.invincibleTimer - deltaTime / 1000);
 
         // 독 처리 (돌진 중엔 면역)
         if (this.isPoisoned) {
@@ -1043,6 +1175,112 @@ export class DashUnit extends Unit {
     }
 }
 
+export class CheckUnit extends Unit {
+    static meta = {
+        type: 'CheckUnit', name: '견제하는넘', rarity: 'EPIC',
+        color: '#a29bfe',
+        hp: 400, speed: 200, level: 1,
+        hpPlus: 60, speedPlus: 10, ignorePlus: 1,
+        passive: '견제', ignoreNum: 1,
+        passiveDesc: (num) => `웨이브마다 랜덤한 타워 ${num}개를 지정합니다.\n지정한 타워들에게 타겟팅이 되지 않습니다.`,
+    };
+    constructor() {
+        super();
+        this.maxHp        = CheckUnit.meta.hp;
+        this.hp           = this.maxHp;
+        this.speed        = CheckUnit.meta.speed;
+        this.color        = CheckUnit.meta.color;
+        this.ignoreNum    = CheckUnit.meta.ignoreNum;
+        this.ignoreTowers = [];
+    }
+
+    spawn(waypoints, hpMul = 1, spdMul = 1) {
+        super.spawn(waypoints, hpMul, spdMul);
+        const towers   = game.towers.filter(Boolean);
+        const shuffled = [...towers].sort(() => Math.random() - 0.5);
+        this.ignoreTowers = shuffled.slice(0, this.ignoreNum);
+    }
+
+    draw(ctx) {
+        if (!this.active) return;
+        ctx.save();
+        ctx.setLineDash([6, 4]);
+        this.ignoreTowers.forEach(tower => {
+            if (!tower) return;
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(tower.x, tower.y);
+            ctx.strokeStyle = hexToRgba(this.color, 0.5);
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        ctx.restore();
+        super.draw(ctx);
+    }
+}
+
+export class DisturbUnit extends Unit {
+    static meta = {
+        type: 'DisturbUnit', name: '방해하는넘', rarity: 'EPIC',
+        color: '#badc58',
+        hp: 550, speed: 140, level: 1,
+        hpPlus: 90, speedPlus: 10, stopMinus: 0.25,
+        passive: '방해', stopTime: 2,
+        passiveDesc: (num) => `${num}초 마다 주변 타워들을 0.3초간 멈춥니다.`,
+    };
+
+    static JAM_DURATION = 0.3;
+    static JAM_RADIUS   = 150;
+
+    constructor() {
+        super();
+        this.maxHp     = DisturbUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = DisturbUnit.meta.speed;
+        this.color     = DisturbUnit.meta.color;
+        this.stopTime  = DisturbUnit.meta.stopTime;
+        this.stopTimer = 0;
+        this.jamFlash  = 0;
+    }
+
+    update(deltaTime, units) {
+        if (this.jamFlash > 0) this.jamFlash = Math.max(0, this.jamFlash - deltaTime / 600);
+        if (this.active && this.alive) {
+            this.stopTimer += deltaTime / 1000;
+            if (this.stopTimer >= this.stopTime) {
+                this.stopTimer -= this.stopTime;
+                this.jamFlash = 1.0;
+                const R = DisturbUnit.JAM_RADIUS;
+                game.towers.forEach(tower => {
+                    if (!tower) return;
+                    const dx = tower.x - this.x, dy = tower.y - this.y;
+                    if (dx * dx + dy * dy <= R * R)
+                        tower.jamTimer = DisturbUnit.JAM_DURATION;
+                });
+            }
+        }
+        super.update(deltaTime, units);
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, DisturbUnit.JAM_RADIUS, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba(this.color, 0.12);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        if (this.jamFlash > 0) {
+            const r = (1 - this.jamFlash) * DisturbUnit.JAM_RADIUS;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, this.jamFlash * 0.8);
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        }
+    }
+}
+
 export class EvadeUnit extends Unit {
     static meta = {
         type: 'EvadeUnit', name: '잽싼넘', rarity: 'LEGEND',
@@ -1091,9 +1329,6 @@ export class TimeUnit extends Unit {
         super.update(deltaTime, units);
         if (this.reverseFlash > 0) {
             this.reverseFlash = Math.max(0, this.reverseFlash - deltaTime / 600);
-        }
-        if (this.invincibleTimer > 0) {
-            this.invincibleTimer = Math.max(0, this.invincibleTimer - deltaTime / 1000);
         }
     }
 
@@ -1155,13 +1390,84 @@ export class TimeUnit extends Unit {
     }
 }
 
+export class SadUnit extends Unit {
+    static meta = {
+        type: 'SadUnit', name: '슬퍼하는넘', rarity: 'LEGEND',
+        color: '#4a4e69',
+        hp: 300, speed: 200, level: 1,
+        hpPlus: 60, speedPlus: 20, maxPlus: 40,
+        passive: '증오', maxHpPlus: 30,
+        passiveDesc: (plus) => `유닛 사망 시 최대 체력이 ${plus} 증가하며 증가분만큼 회복합니다.`,
+    };
+    constructor() {
+        super();
+        this.maxHp     = SadUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = SadUnit.meta.speed;
+        this.color     = SadUnit.meta.color;
+        this.maxHpPlus = SadUnit.meta.maxHpPlus;
+        this.sadFlash  = 0;
+    }
+
+    onAllyDeath(deadUnit, units) {
+        const gain = this.maxHpPlus;
+        this.maxHp += gain;
+        if (!this.noHeal) {
+            this.hp = Math.min(this.maxHp, this.hp + gain);
+            this.sadFlash = 1;
+        }
+    }
+
+    update(deltaTime, units) {
+        if (this.sadFlash > 0) {
+            this.sadFlash = Math.max(0, this.sadFlash - deltaTime / 500);
+        }
+        super.update(deltaTime, units);
+    }
+
+    _drawBody(ctx) {
+        super._drawBody(ctx);
+        if (this.sadFlash > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 12 + 8 * (1 - this.sadFlash), 0, Math.PI * 2);
+            ctx.strokeStyle = hexToRgba(this.color, this.sadFlash);
+            ctx.lineWidth   = 3;
+            ctx.stroke();
+        }
+    }
+}
+
+export class TogetherUnit extends Unit {
+    static meta = {
+        type: 'TogetherUnit', name: '함께하는넘', rarity: 'LEGEND',
+        color: '#e8965d',
+        hp: 250, speed: 180, level: 1,
+        hpPlus: 50, speedPlus: 20, reductionPlus: 1,
+        passive: '의존', reduction: 5,
+        passiveDesc: (num) => `살아있는 유닛 1명당 피해감소 ${num}%를 얻습니다. (최대 15명)`,
+    };
+    constructor() {
+        super();
+        this.maxHp     = TogetherUnit.meta.hp;
+        this.hp        = this.maxHp;
+        this.speed     = TogetherUnit.meta.speed;
+        this.color     = TogetherUnit.meta.color;
+        this.reduction = TogetherUnit.meta.reduction;
+    }
+
+    _applyPassive(units) {
+        const aliveCount = Math.min(units.filter(u => u.active && u.alive).length, 15);
+        this.proximityBonus += aliveCount * this.reduction;
+    }
+}
+
 export const shatterEffects = [];
 
 export const UNIT_CLASSES = [
     NormalUnit, FastUnit, SlowUnit,
-    FlyUnit, GuardUnit, HealUnit, BuffUnit, ShieldUnit,
-    TauntUnit, DietUnit, TiredUnit,
-    InvisibleUnit, SplitUnit, DashUnit,
-    EvadeUnit, TimeUnit,
+    FlyUnit, GuardUnit, HealUnit, BuffUnit, ShieldUnit, StopUnit,
+    TauntUnit, DietUnit, TiredUnit, SelfBombUnit,
+    InvisibleUnit, SplitUnit, DashUnit, CheckUnit, DisturbUnit,
+    EvadeUnit, TimeUnit, SadUnit, TogetherUnit,
 ];
 export const UNIT_CLASS = Object.fromEntries(UNIT_CLASSES.map(Cls => [Cls.name, Cls]));

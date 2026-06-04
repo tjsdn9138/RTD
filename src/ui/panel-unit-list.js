@@ -24,6 +24,10 @@ const PASSIVE_STAT_KEYS = [
     { key: 'splitNum',  nextId: 'next-splitnum', next: m => m.splitNum  + m.splitPlus                                                          },
     { key: 'dashTime',  nextId: 'next-dashtime', next: m => Math.max(0.1, parseFloat((m.dashTime - m.dashMinus).toFixed(2)))                    },
     { key: 'barrier',   nextId: 'next-barrier',  next: m => m.barrier + m.barPlus                                                                },
+    { key: 'maxHpPlus', nextId: 'next-maxhpplus', next: m => m.maxHpPlus + m.maxPlus                                                              },
+    { key: 'reduction', nextId: 'next-reduction', next: m => m.reduction + m.reductionPlus                                                         },
+    { key: 'ignoreNum', nextId: 'next-ignorenum', next: m => m.ignoreNum + m.ignorePlus                                                            },
+    { key: 'stopTime',  nextId: 'next-stoptime',  next: m => parseFloat((m.stopTime - m.stopMinus).toFixed(2))                                     },
 ];
 
 const STAT_MARKER = '\x01STAT\x01';
@@ -147,7 +151,8 @@ function renderDetail(detail, owned, grid) {
             ${m.passive ? (Array.isArray(m.passive)
                 ? m.passive.map((p, i) => {
                     const d = Array.isArray(m.passiveDesc) ? m.passiveDesc[i] : m.passiveDesc;
-                    const resolved = typeof d === 'function' ? d(0) : (d ?? '');
+                    const _stat = PASSIVE_STAT_KEYS.find(s => s.key in m);
+                    const resolved = typeof d === 'function' ? d(_stat ? m[_stat.key] : 0) : (d ?? '');
                     return `<div class="ulist-passive-wrap">
                         <div class="passive-tag">${p}</div>
                         <div class="ulist-passive-desc">${resolved}</div>

@@ -9,12 +9,16 @@ const RARITY_WEIGHT = {
 const SKIP_GOLD_PER_WAVE = 25;
 
 // 모달이 열려있는 동안의 상태
-let _cardsEl     = null;
-let _skipBtn     = null;
-let _closeFn     = null;
-let _onDone      = null;
-let _curChoices  = [];
-let _seenChoices = [];
+let _cardsEl          = null;
+let _skipBtn          = null;
+let _closeFn          = null;
+let _onDone           = null;
+let _curChoices       = [];
+let _seenChoices      = [];
+let _rightLikeTimer   = null;
+let _rightLikeInterval = null;
+
+const RIGHT_LIKE_DELAY = 1; // 자동 선택까지의 대기 시간 (초)
 
 function pickOneAug(exclude) {
     const ownedNames   = new Set(game.augmentations.map(a => a.constructor.name));
@@ -25,10 +29,14 @@ function pickOneAug(exclude) {
         !ownedNames.has(Cls.name) &&
         !exclNames.has(Cls.name) &&
         (!Cls.meta.family || !exclFamilies.has(Cls.meta.family)) &&
-        (!Cls.meta.firstOnly || isFirst)
+        (!Cls.meta.firstOnly || isFirst) &&
+        (!Cls.meta.lifeOneOnly || game.lives === 1) &&
+        (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) &&
+        (!game.contractDone || Cls.meta.requires !== 'ContractAug') &&
+        (!Cls.meta.requires || ownedNames.has(Cls.meta.requires))
     );
     if (pool.length === 0)
-        pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
+        pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst) && (!Cls.meta.lifeOneOnly || game.lives === 1) && (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) && (!game.contractDone || Cls.meta.requires !== 'ContractAug') && (!Cls.meta.requires || ownedNames.has(Cls.meta.requires)));
     return weightedPick(pool);
 }
 
@@ -40,7 +48,11 @@ function _hasRerollPool(exclude) {
     return AUGMENTATION_CLASSES.some(Cls =>
         !ownedNames.has(Cls.name) &&
         !exclNames.has(Cls.name) &&
-        (!Cls.meta.firstOnly || isFirst)
+        (!Cls.meta.firstOnly || isFirst) &&
+        (!Cls.meta.lifeOneOnly || game.lives === 1) &&
+        (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) &&
+        (!game.contractDone || Cls.meta.requires !== 'ContractAug') &&
+        (!Cls.meta.requires || ownedNames.has(Cls.meta.requires))
     );
 }
 
@@ -48,8 +60,8 @@ function pickAugs(exclude = []) {
     const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
     const exclNames  = new Set(exclude.map(Cls => Cls.name));
     const isFirst    = game.augmentations.length === 0;
-    let pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
-    if (pool.length < 3) pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst));
+    let pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && !exclNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst) && (!Cls.meta.lifeOneOnly || game.lives === 1) && (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) && (!game.contractDone || Cls.meta.requires !== 'ContractAug') && (!Cls.meta.requires || ownedNames.has(Cls.meta.requires)));
+    if (pool.length < 3) pool = AUGMENTATION_CLASSES.filter(Cls => !ownedNames.has(Cls.name) && (!Cls.meta.firstOnly || isFirst) && (!Cls.meta.lifeOneOnly || game.lives === 1) && (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) && (!game.contractDone || Cls.meta.requires !== 'ContractAug') && (!Cls.meta.requires || ownedNames.has(Cls.meta.requires)));
 
     const result = [];
     const pickedFamilies = new Set();
@@ -97,7 +109,7 @@ function renderCards(choices) {
 
         const rerollItem = inventory.find(i => i.type === 'AugReroll');
         const rerollCount = rerollItem?.count ?? 0;
-        const canReroll = rerollCount > 0 && _hasRerollPool(_seenChoices);
+        const canReroll = !game.rightLikeActive && rerollCount > 0 && _hasRerollPool(_seenChoices);
         const refreshBtn = document.createElement('button');
         refreshBtn.className = 'aug-card-refresh' + (canReroll ? '' : ' disabled');
         refreshBtn.textContent = `↺ x${rerollCount}`;
@@ -117,14 +129,27 @@ function renderCards(choices) {
         });
 
         card.append(rarEl, nameEl, descEl);
-        card.addEventListener('click', () => {
-            const aug = new Cls();
-            game.augmentations.push(aug);
-            aug.onAcquire();
-            const done = _onDone;
-            _closeFn();
-            done?.();
-        });
+        const isForced = game.rightLikeActive && idx !== choices.length - 1;
+        if (isForced) {
+            card.classList.add('disabled');
+        } else {
+            card.addEventListener('click', () => {
+                clearTimeout(_rightLikeTimer);
+                clearInterval(_rightLikeInterval);
+                _rightLikeTimer = null;
+                _rightLikeInterval = null;
+                if (game.rightLikeActive) {
+                    const discarded = _curChoices.filter((_, i) => i !== idx);
+                    addGold(getSkipGold(discarded));
+                }
+                const aug = new Cls();
+                game.augmentations.push(aug);
+                aug.onAcquire();
+                const done = _onDone;
+                _closeFn();
+                done?.();
+            });
+        }
 
         const wrap = document.createElement('div');
         wrap.className = 'aug-card-wrap';
@@ -133,6 +158,41 @@ function renderCards(choices) {
     });
 
     _skipBtn.textContent = `포기하고 ${getSkipGold(choices)}G 받기`;
+
+    if (game.rightLikeActive) {
+        clearTimeout(_rightLikeTimer);
+        clearInterval(_rightLikeInterval);
+
+        const rightIdx  = choices.length - 1;
+        const rightWrap = _cardsEl.children[rightIdx];
+        const countEl   = document.createElement('div');
+        countEl.className = 'aug-card-countdown';
+        let remaining   = RIGHT_LIKE_DELAY;
+        countEl.textContent = remaining;
+        rightWrap.appendChild(countEl);
+
+        _rightLikeInterval = setInterval(() => {
+            remaining--;
+            countEl.textContent = remaining;
+            if (remaining <= 0) {
+                clearInterval(_rightLikeInterval);
+                _rightLikeInterval = null;
+            }
+        }, 1000);
+
+        _rightLikeTimer = setTimeout(() => {
+            _rightLikeTimer = null;
+            const lastCls   = choices[rightIdx];
+            const discarded = _curChoices.filter((_, i) => i !== rightIdx);
+            addGold(getSkipGold(discarded));
+            const aug  = new lastCls();
+            game.augmentations.push(aug);
+            aug.onAcquire();
+            const done = _onDone;
+            _closeFn();
+            done?.();
+        }, RIGHT_LIKE_DELAY * 1000);
+    }
 }
 
 
@@ -194,6 +254,10 @@ export function openAugSelect(onDone) {
     document.addEventListener('keydown', onKey, true);
 
     _closeFn = () => {
+        clearTimeout(_rightLikeTimer);
+        clearInterval(_rightLikeInterval);
+        _rightLikeTimer    = null;
+        _rightLikeInterval = null;
         game.augPending = false;
         game.augChoices = [];
         document.removeEventListener('keydown', onKey, true);

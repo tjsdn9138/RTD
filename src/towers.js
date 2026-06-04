@@ -11,6 +11,9 @@ export class Tower {
         this.attackTimer = 0; // 마지막으로 공격한 이후로의 시간
         this.color = '#e67e22';
         this.stopped = false;
+        this.jamTimer = 0;
+        this.smokeTimer = 0;
+        this.smokeBaseRange = 0;
     }
 
     // 유닛과의 직선 거리 계산
@@ -37,6 +40,10 @@ export class Tower {
     // 공속 쿨다운 누적. 정지 상태거나 아직 쿨이면 false.
     _tickReady(deltaTime) {
         if (this.stopped) return false;
+        if (this.jamTimer > 0) {
+            this.jamTimer = Math.max(0, this.jamTimer - deltaTime / 1000);
+            return false;
+        }
         this.attackTimer += deltaTime / 1000;
         return this.attackTimer >= 1 / this.attackSpeed;
     }
@@ -63,6 +70,7 @@ export class Tower {
             if (!unit.active || !unit.alive) return;
             if (skipInvisible && unit.isInvisible) return;
             if (skipFlying    && unit.isFlying)    return;
+            if (unit.ignoreTowers?.includes(this)) return;
             if (this.getDistance(unit) > this.range) return;
 
             const progress = this.getProgress(unit);

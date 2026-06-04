@@ -1,6 +1,7 @@
-import { game, getReward, addGold, getFailReward, MAX_UNIT_LEVEL, MAX_WAVES } from './state.js';
-import { inventory, deploySlots } from './game.js';
+import { game, getReward, addGold, getFailReward, spendGold, MAX_UNIT_LEVEL, MAX_WAVES } from './state.js';
+import { inventory, deploySlots, levelUpTower } from './game.js';
 import { UNIT_CLASSES } from './units.js';
+import { ITEM_CLASSES } from './items.js';
 
 export function dispatchAug(hook, ...args) {
     game.augmentations.forEach(aug => aug[hook](...args));
@@ -54,6 +55,61 @@ export class AutoOnlyAug extends Augmentation {
         game.manualSpawnDisabled = true;
         game.autoSpawn = true;
     }
+}
+
+function applyFreeLevel(count) {
+    const levelable = UNIT_CLASSES.filter(Cls => Cls.meta.level < MAX_UNIT_LEVEL);
+    for (let i = 0; i < count; i++) {
+        if (!levelable.length) break;
+        const idx  = Math.floor(Math.random() * levelable.length);
+        const meta = levelable[idx].meta;
+
+        meta.hp    = Math.floor(meta.hp    + meta.hpPlus);
+        meta.speed = Math.floor(meta.speed + meta.speedPlus);
+        meta.level++;
+
+        if (meta.level % 5 === 0) {
+            if ('defense'    in meta) meta.defense    += meta.defPlus;
+            if ('timePlus'   in meta) meta.time        = parseFloat((meta.time + meta.timePlus).toFixed(2));
+            if ('dodgeProb'  in meta) meta.dodgeProb   = parseFloat(Math.min(100, meta.dodgeProb + meta.dodgePlus).toFixed(2));
+            if ('heal'       in meta) meta.heal        += meta.healPlus;
+            if ('decDamage'  in meta) meta.decDamage   += meta.decPlus;
+            if ('returnPlus' in meta) meta.returnHp    = Math.min(100, meta.returnHp + meta.returnPlus);
+            if ('splitPlus'  in meta) meta.splitNum    += meta.splitPlus;
+            if ('dashMinus'  in meta) meta.dashTime    = Math.max(0.1, parseFloat((meta.dashTime - meta.dashMinus).toFixed(2)));
+            if ('barPlus'       in meta) meta.barrier     += meta.barPlus;
+            if ('maxPlus'       in meta) meta.maxHpPlus   += meta.maxPlus;
+            if ('reductionPlus' in meta) meta.reduction   += meta.reductionPlus;
+            if ('ignorePlus'    in meta) meta.ignoreNum   += meta.ignorePlus;
+            if ('stopMinus'     in meta) meta.stopTime    = Math.max(0.5, parseFloat((meta.stopTime - meta.stopMinus).toFixed(2)));
+        }
+
+        if (meta.level >= MAX_UNIT_LEVEL) levelable.splice(idx, 1);
+    }
+}
+
+function levelDownUnit(Cls) {
+    const meta = Cls.meta;
+    if (meta.level < 2) return false;
+    if (meta.level % 5 === 0) {
+        if ('defense'   in meta && 'defPlus'   in meta) meta.defense   -= meta.defPlus;
+        if ('timePlus'  in meta)                         meta.time       = parseFloat((meta.time - meta.timePlus).toFixed(2));
+        if ('dodgeProb' in meta && 'dodgePlus' in meta) meta.dodgeProb  = parseFloat(Math.max(0, meta.dodgeProb - meta.dodgePlus).toFixed(2));
+        if ('heal'      in meta && 'healPlus'  in meta) meta.heal      -= meta.healPlus;
+        if ('decDamage' in meta && 'decPlus'   in meta) meta.decDamage -= meta.decPlus;
+        if ('returnPlus' in meta)                        meta.returnHp   = Math.max(0, meta.returnHp - meta.returnPlus);
+        if ('splitPlus' in meta)                         meta.splitNum   = Math.max(1, meta.splitNum - meta.splitPlus);
+        if ('dashMinus' in meta)                         meta.dashTime   = parseFloat((meta.dashTime + meta.dashMinus).toFixed(2));
+        if ('barPlus'       in meta) meta.barrier   = Math.max(0, meta.barrier   - meta.barPlus);
+        if ('maxPlus'       in meta) meta.maxHpPlus = Math.max(1, meta.maxHpPlus - meta.maxPlus);
+        if ('reductionPlus' in meta) meta.reduction = Math.max(1, meta.reduction - meta.reductionPlus);
+        if ('ignorePlus'    in meta) meta.ignoreNum = Math.max(1, meta.ignoreNum - meta.ignorePlus);
+        if ('stopMinus'     in meta) meta.stopTime  = parseFloat((meta.stopTime  + meta.stopMinus).toFixed(2));
+    }
+    meta.hp    = Math.max(1, Math.floor(meta.hp    - meta.hpPlus));
+    meta.speed = Math.max(1, Math.floor(meta.speed - meta.speedPlus));
+    meta.level--;
+    return true;
 }
 
 export class LifeGambleAug extends Augmentation {
@@ -121,31 +177,7 @@ export class LifeGambleAug extends Augmentation {
                 break;
         }
     }
-    _applyFreeLevel(count) {
-        const levelable = UNIT_CLASSES.filter(Cls => Cls.meta.level < MAX_UNIT_LEVEL);
-        for (let i = 0; i < count; i++) {
-            if (!levelable.length) break;
-            const idx  = Math.floor(Math.random() * levelable.length);
-            const meta = levelable[idx].meta;
-
-            meta.hp    = Math.floor(meta.hp    + meta.hpPlus);
-            meta.speed = Math.floor(meta.speed + meta.speedPlus);
-            meta.level++;
-
-            if (meta.level % 5 === 0) {
-                if ('defense'    in meta) meta.defense    += meta.defPlus;
-                if ('timePlus'   in meta) meta.time        = parseFloat((meta.time + meta.timePlus).toFixed(2));
-                if ('dodgeProb'  in meta) meta.dodgeProb   = parseFloat(Math.min(100, meta.dodgeProb + meta.dodgePlus).toFixed(2));
-                if ('heal'       in meta) meta.heal        += meta.healPlus;
-                if ('decDamage'  in meta) meta.decDamage   += meta.decPlus;
-                if ('returnPlus' in meta) meta.returnHp    = Math.min(100, meta.returnHp + meta.returnPlus);
-                if ('splitPlus'  in meta) meta.splitNum    += meta.splitPlus;
-                if ('dashMinus'  in meta) meta.dashTime    = Math.max(0.1, parseFloat((meta.dashTime - meta.dashMinus).toFixed(2)));
-            }
-
-            if (meta.level >= MAX_UNIT_LEVEL) levelable.splice(idx, 1);
-        }
-    }
+    _applyFreeLevel(count) { applyFreeLevel(count); }
 }
 
 export class HesitationAug extends Augmentation {
@@ -163,9 +195,9 @@ export class HesitationAug extends Augmentation {
     }
 }
 
-export class SmallHopeAug extends Augmentation {
+export class PrayAug extends Augmentation {
     static meta = {
-        name: '작은 희망',
+        name: '기도',
         rarity: 'COMMON',
         desc: '10% 확률로 무작위 전설 등급 증강을 획득합니다.',
     }
@@ -175,12 +207,12 @@ export class SmallHopeAug extends Augmentation {
     }
     onAcquire() {
         if (Math.random() >= 0.1) {
-            this.rewardLabel = '결과: 때론 희망이라 믿었던 것이 본인을 더욱 힘들게 만들고 있었을지도 모릅니다...';
+            this.rewardLabel = '결과: 기도를 들어줄 이는 존재하지 않았습니다...';
             return;
         }
         const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
         const pool = AUGMENTATION_CLASSES.filter(Cls =>
-            Cls.meta.rarity === 'LEGEND' && !ownedNames.has(Cls.name)
+            Cls.meta.rarity === 'LEGEND' && !ownedNames.has(Cls.name) && !Cls.meta.chainOnly
         );
         if (!pool.length) {
             this.rewardLabel = '결과: 획득할 수 있는 전설 증강이 없습니다.';
@@ -191,6 +223,116 @@ export class SmallHopeAug extends Augmentation {
         game.augmentations.push(aug);
         aug.onAcquire();
         this.rewardLabel = `결과: ${Cls.meta.name} 획득`;
+    }
+}
+
+export class CountDownAug extends Augmentation {
+    static meta = {
+        name: '카운트다운',
+        rarity: 'COMMON',
+        desc: '카운트다운을 시작합니다.',
+        chainOnly: true,
+    }
+}
+
+export class CountVAug extends Augmentation {
+    static meta = {
+        name: '다섯',
+        rarity: 'COMMON',
+        desc: '유닛 뽑기권 55장과 아이템 뽑기권 5장을 얻습니다.',
+        requires: 'CountDownAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        const unitSlot = inventory.find(i => i.type === 'UnitGachaTicket');
+        const itemSlot = inventory.find(i => i.type === 'ItemGachaTicket');
+        if (unitSlot) unitSlot.count += 55;
+        if (itemSlot) itemSlot.count += 5;
+    }
+}
+
+export class ContractAug extends Augmentation {
+    static meta = {
+        name: '계약',
+        rarity: 'COMMON',
+        desc: '계약을 시작합니다.\n잃는 것이 있다면 얻는 것도 있습니다.',
+        chainOnly: true,
+    }
+}
+
+export class ContractDoneAug extends Augmentation {
+    static meta = {
+        name: '계약 완료',
+        rarity: 'COMMON',
+        desc: '현재까지 한 계약에 비례한 보상을 얻습니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+    }
+    constructor() {
+        super();
+        this.rewardLabel = null;
+    }
+    onAcquire() {
+        game.contractDone = true;
+
+        // 획득한 계약 체인 증강(ContractI~V) 수집 후 등급별 그룹화
+        const contractChain = game.augmentations.filter(aug =>
+            aug.constructor.meta.requires === 'ContractAug' &&
+            aug.constructor.name !== 'ContractDoneAug'
+        );
+        const byRarity = {};
+        contractChain.forEach(aug => {
+            const r = aug.constructor.meta.rarity;
+            byRarity[r] = (byRarity[r] || 0) + 1;
+        });
+
+        // 각 등급별로 동일 등급 비체인 증강 2개 무작위 지급
+        const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
+        const rewards = [];
+        Object.keys(byRarity).forEach(rarity => {
+            const pool = AUGMENTATION_CLASSES.filter(Cls =>
+                Cls.meta.rarity === rarity &&
+                !ownedNames.has(Cls.name) &&
+                !Cls.meta.chainOnly &&
+                !Cls.meta.firstOnly &&
+                (!Cls.meta.lifeOneOnly || game.lives === 1) &&
+                (!Cls.meta.minLives || game.lives >= Cls.meta.minLives) &&
+                (!Cls.meta.requires || ownedNames.has(Cls.meta.requires))
+            );
+            for (let i = 0; i < 2 && pool.length > 0; i++) {
+                const idx = Math.floor(Math.random() * pool.length);
+                const Cls = pool.splice(idx, 1)[0];
+                const aug = new Cls();
+                game.augmentations.push(aug);
+                aug.onAcquire();
+                ownedNames.add(Cls.name);
+                rewards.push(Cls.meta.name);
+            }
+        });
+
+        this.rewardLabel = rewards.length > 0
+            ? `결과: ${rewards.join(', ')} 획득`
+            : '결과: 획득 가능한 증강이 없습니다.';
+    }
+}
+
+export class ContractIAug extends Augmentation {
+    static meta = {
+        name: '계약: 압류',
+        rarity: 'COMMON',
+        desc: '현재 보유한 모든 2레벨 이상의 유닛 및 아이템의 레벨이 1 감소합니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        UNIT_CLASSES.forEach(Cls => levelDownUnit(Cls));
+        ITEM_CLASSES.forEach(Cls => {
+            const meta = Cls.meta;
+            if (!('level' in meta) || meta.level < 2) return;
+            if ('multiplier' in meta) meta.multiplier = parseFloat((meta.multiplier - meta.LevelUpPlus).toFixed(4));
+            else if ('bonus' in meta) meta.bonus -= meta.LevelUpPlus;
+            meta.level--;
+        });
     }
 }
 
@@ -220,16 +362,16 @@ export class FastAug extends Augmentation {
     }
 }
 
-export class TogetherIAug extends Augmentation {
+export class FriendShieldIAug extends Augmentation {
     static meta = {
-        name: '뭉쳐야 산다 I',
+        name: '프렌드 실드 I',
         rarity: 'UNCOMMON',
-        family: '뭉쳐야 산다',
+        family: '프렌드 실드',
         desc: '유닛들이 주변에 있는 유닛 1명당 피해 감소 3%를 얻습니다. (최대 9%)',
         reductionPerUnit: 3, maxReduction: 9, radius: 60,
     }
     onUpdate(deltaTime, units) {
-        const { reductionPerUnit, maxReduction, radius } = TogetherIAug.meta;
+        const { reductionPerUnit, maxReduction, radius } = FriendShieldIAug.meta;
         const active = units.filter(u => u.active && u.alive);
         active.forEach(unit => {
             const nearby = active.filter(u => u !== unit && Math.hypot(u.x - unit.x, u.y - unit.y) <= radius).length;
@@ -278,6 +420,103 @@ export class InterestAug extends Augmentation {
     }
 }
 
+export class CountIVAug extends Augmentation {
+    static meta = {
+        name: '넷',
+        rarity: 'UNCOMMON',
+        desc: '무작위 유닛 4개를 레벨업 시킵니다.',
+        requires: 'CountVAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        applyFreeLevel(4);
+    }
+}
+
+export class SuperstitionAug extends Augmentation {
+    static meta = {
+        name: '미신',
+        rarity: 'UNCOMMON',
+        desc: '50% 확률로 모든 타워의 레벨이 1 감소합니다.\n50% 확률로 모든 타워의 레벨이 1 증가합니다.',
+    }
+    constructor() {
+        super();
+        this.rewardLabel = null;
+    }
+    onAcquire() {
+        if (Math.random() < 0.5) {
+            game.towers.forEach(tower => {
+                if (!tower || tower.level <= 1) return;
+                const meta = tower.constructor.meta;
+                if (!meta) return;
+                if (tower.level % 5 === 0) {
+                    tower.attackSpeed = parseFloat((tower.attackSpeed - meta.speedPlus).toFixed(4));
+                    tower.range       = Math.floor(tower.range       - meta.rangePlus);
+                }
+                tower.damage = Math.floor(tower.damage - meta.dmgPlus);
+                tower.level--;
+            });
+            this.rewardLabel = '결과: 진실된 미신 — 모든 타워의 레벨이 1 감소했습니다.';
+        } else {
+            game.towers.forEach(tower => { if (tower) levelUpTower(tower); });
+            this.rewardLabel = '결과: 거짓된 미신 — 모든 타워의 레벨이 1 증가했습니다.';
+        }
+    }
+}
+
+export class ContractIIAug extends Augmentation {
+    static meta = {
+        name: '계약: 임금체불',
+        rarity: 'UNCOMMON',
+        desc: '웨이브 클리어 골드가 20% 감소합니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        game.waveRewardMul = parseFloat((game.waveRewardMul * 0.8).toFixed(4));
+    }
+}
+
+export class LifeInsuranceAug extends Augmentation {
+    static meta = {
+        name: '생명보험',
+        rarity: 'UNCOMMON',
+        desc: '생명을 잃을 때 획득하는 골드가 2배가 됩니다.',
+    }
+    onAcquire() {
+        game.failGoldMul *= 2;
+    }
+}
+
+export class LoneWolfIAug extends Augmentation {
+    static meta = {
+        name: '고독한 늑대 I',
+        rarity: 'UNCOMMON',
+        family: '고독한 늑대',
+        desc: '유닛들이 주변에 다른 유닛이 없을 때 피해 감소 10%를 얻습니다.',
+        reduction: 10, radius: 80,
+    }
+    onUpdate(deltaTime, units) {
+        const { reduction, radius } = LoneWolfIAug.meta;
+        const active = units.filter(u => u.active && u.alive);
+        active.forEach(unit => {
+            const alone = !active.some(u => u !== unit && Math.hypot(u.x - unit.x, u.y - unit.y) <= radius);
+            if (alone) unit.proximityBonus += reduction;
+        });
+    }
+}
+
+export class RightLikeAug extends Augmentation {
+    static meta = {
+        name: '오른쪽이 좋아',
+        rarity: 'UNCOMMON',
+        desc: '남은 증강 선택 시 새로고침을 할 수 없으며 오른쪽 증강이 선택됩니다.\n버려진 증강의 등급에 따라 골드를 획득합니다.',
+    }
+    onAcquire() {
+        game.rightLikeActive = true;
+    }
+}
+
 export class TooManyIIAug extends Augmentation {
     static meta = {
         name: '인해전술 II',
@@ -308,16 +547,16 @@ export class AdaptIAug extends Augmentation {
     }
 }
 
-export class TogetherIIAug extends Augmentation {
+export class FriendShieldIIAug extends Augmentation {
     static meta = {
-        name: '뭉쳐야 산다 II',
+        name: '프렌드 실드 II',
         rarity: 'RARE',
-        family: '뭉쳐야 산다',
+        family: '프렌드 실드',
         desc: '유닛들이 주변에 있는 유닛 1명당 피해 감소 5%를 얻습니다. (최대 20%)',
         reductionPerUnit: 5, maxReduction: 20, radius: 60,
     }
     onUpdate(deltaTime, units) {
-        const { reductionPerUnit, maxReduction, radius } = TogetherIIAug.meta;
+        const { reductionPerUnit, maxReduction, radius } = FriendShieldIIAug.meta;
         const active = units.filter(u => u.active && u.alive);
         active.forEach(unit => {
             const nearby = active.filter(u => u !== unit && Math.hypot(u.x - unit.x, u.y - unit.y) <= radius).length;
@@ -402,7 +641,7 @@ export class RandomAug extends Augmentation {
     onAcquire() {
         const ownedNames = new Set(game.augmentations.map(a => a.constructor.name));
         const pool = AUGMENTATION_CLASSES.filter(Cls =>
-            Cls !== RandomAug && !ownedNames.has(Cls.name)
+            Cls !== RandomAug && !ownedNames.has(Cls.name) && !Cls.meta.chainOnly
         );
         if (!pool.length) {
             this.rewardLabel = '결과: 획득할 수 있는 증강이 없습니다.';
@@ -428,6 +667,99 @@ export class ATMAug extends Augmentation {
     onUnitHit(unit) {
         const gold = Math.floor(unit.maxHp * 10 / 100);
         if (gold > 0) addGold(gold);
+    }
+}
+
+export class CountIIIAug extends Augmentation {
+    static meta = {
+        name: '셋',
+        rarity: 'RARE',
+        desc: '다음 웨이브 획득 보상이 3배가 됩니다.',
+        requires: 'CountIVAug',
+        chainOnly: true,
+    }
+    constructor() {
+        super();
+        this.done = false;
+    }
+    onWaveClear(units) {
+        if (this.done) return;
+        game.nextWaveRewardMul = 3;
+        this.done = true;
+    }
+}
+
+export class ContractIIIAug extends Augmentation {
+    static meta = {
+        name: '계약: 몰수',
+        rarity: 'RARE',
+        desc: '현재 보유한 골드를 모두 잃습니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        spendGold(game.gold);
+    }
+}
+
+export class LittleHopeAug extends Augmentation {
+    static meta = {
+        name: '일말의 희망',
+        rarity: 'RARE',
+        desc: '생명을 1개 획득합니다.',
+        lifeOneOnly: true,
+    }
+    onAcquire() {
+        game.lives++;
+    }
+}
+
+export class HitReadyAug extends Augmentation {
+    static meta = {
+        name: '맞을 준비',
+        rarity: 'RARE',
+        desc: '3초 동안 피해를 입지 않으면 최대 체력의 15% 보호막을 얻습니다.',
+        delay: 3, shieldPct: 15,
+    }
+    onWaveStart(units) {
+        units.forEach(unit => { unit.hitReadyTimer = 0; });
+    }
+    onUnitHit(unit) {
+        unit.hitReadyTimer = 0;
+    }
+    onUpdate(deltaTime, units) {
+        const { delay, shieldPct } = HitReadyAug.meta;
+        units.filter(u => u.active && u.alive).forEach(unit => {
+            if (unit.shieldHp > 0) {
+                unit.hitReadyTimer = 0;
+                return;
+            }
+            unit.hitReadyTimer = (unit.hitReadyTimer ?? 0) + deltaTime / 1000;
+            if (unit.hitReadyTimer >= delay) {
+                const amount = Math.floor(unit.maxHp * shieldPct / 100 * (unit.shieldBonus ?? 1));
+                unit.shieldHp  = amount;
+                unit.shieldMax = Math.max(unit.shieldMax, amount);
+                unit.hitReadyTimer = 0;
+            }
+        });
+    }
+}
+
+export class LoneWolfIIAug extends Augmentation {
+    static meta = {
+        name: '고독한 늑대 II',
+        rarity: 'RARE',
+        family: '고독한 늑대',
+        desc: '유닛들이 주변에 다른 유닛이 없을 때 피해 감소 15%를 얻습니다.',
+        reduction: 15, radius: 80,
+    }
+    onUpdate(deltaTime, units) {
+        const { reduction, radius } = LoneWolfIIAug.meta;
+        const active = units.filter(u => u.active && u.alive);
+        active.forEach(unit => {
+            const alone = !active.some(u => u !== unit && Math.hypot(u.x - unit.x, u.y - unit.y) <= radius);
+            if (alone) unit.proximityBonus += reduction;
+        });
     }
 }
 
@@ -569,6 +901,90 @@ export class ManyGoodAug extends Augmentation {
     }
 }
 
+export class CountIIAug extends Augmentation {
+    static meta = {
+        name: '둘',
+        rarity: 'EPIC',
+        desc: '2초마다 체력이 가장 적은 유닛 2마리의 체력을 20% 회복시킵니다.',
+        requires: 'CountIIIAug',
+        chainOnly: true,
+    }
+    constructor() {
+        super();
+        this.healTimer = 0;
+    }
+    onWaveStart(units) {
+        this.healTimer = 0;
+    }
+    onUpdate(deltaTime, units) {
+        this.healTimer += deltaTime / 1000;
+        if (this.healTimer < 2) return;
+        this.healTimer -= 2;
+        const alive = units.filter(u => u.active && u.alive);
+        if (!alive.length) return;
+        const sorted = [...alive].sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+        sorted.slice(0, 2).forEach(unit => {
+            unit.hp = Math.min(unit.maxHp, unit.hp + unit.maxHp * 0.2 * (unit.healBonus ?? 1));
+        });
+    }
+}
+
+export class HackingAug extends Augmentation {
+    static meta = {
+        name: '해킹',
+        rarity: 'EPIC',
+        desc: '웨이브 시작 시 60% 확률로 10초간 랜덤한 타워 하나를 멈춥니다.\n유닛이 하나라도 통과하면 해킹이 풀립니다.',
+    }
+    constructor() {
+        super();
+        this.hackedTower  = null;
+        this.hackTimer    = 0;
+        this.firstSpawned = false;
+    }
+    onWaveStart(units) {
+        this.hackedTower  = null;
+        this.hackTimer    = 0;
+        this.firstSpawned = false;
+        if (Math.random() >= 0.6) return;
+        const candidates = game.towers.filter(t => t && !t.stopped);
+        if (!candidates.length) return;
+        this.hackedTower = candidates[Math.floor(Math.random() * candidates.length)];
+    }
+    onUnitSpawn(unit, units, waypoints) {
+        if (this.firstSpawned || !this.hackedTower) return;
+        this.firstSpawned = true;
+        this.hackedTower.stopped = true;
+        this.hackTimer = 10;
+    }
+    onUpdate(deltaTime, units) {
+        if (!this.hackedTower || this.hackTimer <= 0) return;
+        this.hackTimer -= deltaTime / 1000;
+        if (this.hackTimer <= 0) {
+            this.hackedTower.stopped = false;
+            this.hackedTower = null;
+        }
+    }
+    onUnitSurvive(unit, units) {
+        if (!this.hackedTower) return;
+        this.hackedTower.stopped = false;
+        this.hackedTower = null;
+        this.hackTimer = 0;
+    }
+}
+
+export class ContractIVAug extends Augmentation {
+    static meta = {
+        name: '계약: 과로',
+        rarity: 'EPIC',
+        desc: '모든 타워의 레벨이 1 증가합니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        game.towers.forEach(t => { if (t) levelUpTower(t); });
+    }
+}
+
 export class TooManyIVAug extends Augmentation {
     static meta = {
         name: '인해전술 IV',
@@ -671,12 +1087,80 @@ export class RevengeAug extends Augmentation {
     }
 }
 
+export class CountIAug extends Augmentation {
+    static meta = {
+        name: '하나',
+        rarity: 'LEGEND',
+        desc: '레벨이 가장 높은 타워 하나를 부숩니다.',
+        requires: 'CountIIAug',
+        chainOnly: true,
+    }
+    onAcquire() {
+        let maxLevel = -Infinity;
+        let maxIdx = -1;
+        game.towers.forEach((t, i) => {
+            if (t && t.level > maxLevel) { maxLevel = t.level; maxIdx = i; }
+        });
+        if (maxIdx !== -1) {
+            game.towers[maxIdx] = null;
+            game.relocateTowers?.();
+        }
+    }
+}
+
+export class CounterAttackAug extends Augmentation {
+    static meta = {
+        name: '반격',
+        rarity: 'LEGEND',
+        desc: '유닛 피격 시 10% 확률로 1초간 무적이 됩니다.',
+    }
+    onUnitHit(unit) {
+        if (Math.random() >= 0.1) return;
+        unit.invincibleTimer = 1.0;
+    }
+}
+
+export class ContractVAug extends Augmentation {
+    static meta = {
+        name: '계약: 착취',
+        rarity: 'LEGEND',
+        desc: '생명이 2개 감소한다.\n유닛들이 더이상 보호막을 얻을 수 없고, 체력을 회복할 수 없습니다.',
+        requires: 'ContractAug',
+        chainOnly: true,
+        minLives: 3,
+    }
+    onAcquire() {
+        game.lives = Math.max(1, game.lives - 2);
+    }
+    onWaveStart(units) {
+        units.forEach(unit => {
+            unit.noHeal   = true;
+            unit.shieldHp  = 0;
+            unit.shieldMax = 0;
+            unit.shield    = false;
+        });
+    }
+    onUnitSpawn(unit) {
+        unit.noHeal   = true;
+        unit.shieldHp  = 0;
+        unit.shieldMax = 0;
+        unit.shield    = false;
+    }
+    onUpdate(deltaTime, units) {
+        units.filter(u => u.active && u.alive).forEach(unit => {
+            if (unit.shieldHp  > 0) unit.shieldHp  = 0;
+            if (unit.shieldMax > 0) unit.shieldMax = 0;
+            if (unit.shield)        unit.shield    = false;
+        });
+    }
+}
+
 export const AUGMENTATION_CLASSES = [
-    ChangePosAug, AutoOnlyAug, LifeGambleAug, HesitationAug, SmallHopeAug,
-    TooManyIAug, FastAug, TogetherIAug, GoldGoblinIAug, FirstAidKitIAug, InterestAug,
-    TooManyIIAug, AdaptIAug, TogetherIIAug, GoldGoblinIIAug, VanguardAug, LastStandingAug, RandomAug, ATMAug,
-    TooManyIIIAug, SoloLevelingAug, AdaptIIAug, SacrificeAug, MoraleBoostAug, FirstAidKitIIAug, ManyGoodAug,
-    TooManyIVAug, AuthorityAug, ShadowAug, IndomitableAug, BarrierAug, RevengeAug,
+    ChangePosAug, AutoOnlyAug, LifeGambleAug, HesitationAug, PrayAug, CountDownAug, CountVAug, ContractAug, ContractDoneAug, ContractIAug,
+    TooManyIAug, FastAug, FriendShieldIAug, GoldGoblinIAug, FirstAidKitIAug, InterestAug, CountIVAug, SuperstitionAug, ContractIIAug, LifeInsuranceAug, LoneWolfIAug, RightLikeAug,
+    TooManyIIAug, AdaptIAug, FriendShieldIIAug, GoldGoblinIIAug, VanguardAug, LastStandingAug, RandomAug, ATMAug, CountIIIAug, ContractIIIAug, LittleHopeAug, HitReadyAug, LoneWolfIIAug,
+    TooManyIIIAug, SoloLevelingAug, AdaptIIAug, SacrificeAug, MoraleBoostAug, FirstAidKitIIAug, ManyGoodAug, CountIIAug, HackingAug, ContractIVAug,
+    TooManyIVAug, AuthorityAug, ShadowAug, IndomitableAug, BarrierAug, RevengeAug, CountIAug, CounterAttackAug, ContractVAug,
 ];
 export const AUGMENTATION_CLASS = Object.fromEntries(
     AUGMENTATION_CLASSES.map(Cls => [Cls.name, Cls])

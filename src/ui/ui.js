@@ -314,6 +314,14 @@ document.addEventListener('keydown', e => {
     unitIdx = digit - 1;
   }
   const unit = game.units[unitIdx];
+  if (!unit) return;
+  // 출전 중인 StopUnit이고 아직 멈추지 않았으면 정지
+  if (unit.spawned && unit.active && unit.alive && typeof unit.stop === 'function' && !unit.isStopped) {
+    e.preventDefault();
+    unit.stop();
+    refreshUnitPanel();
+    return;
+  }
   if (!unit || unit.spawned) return;
   e.preventDefault();
   document.dispatchEvent(new CustomEvent('spawnunit', { detail: { unit } }));

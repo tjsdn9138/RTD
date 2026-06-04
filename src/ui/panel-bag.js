@@ -140,6 +140,16 @@ function handleActiveUse(itemData, card) {
         }
         return;
     }
+    if (itemData.type === 'SmokeBomb') {
+        if (game.state !== 'BATTLE') return;
+        const inst = new (ITEM_CLASS['SmokeBomb'])();
+        if (inst.use()) {
+            itemData.count--;
+            saveGame();
+            renderBagPanel(document.getElementById('panel-bag'));
+        }
+        return;
+    }
     if (game.pendingItem === itemData.type) {
         game.pendingItem = null;
         card.classList.remove('selected');

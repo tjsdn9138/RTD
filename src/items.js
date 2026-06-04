@@ -172,7 +172,7 @@ export class LegendCharm extends PassiveItem {
 export class Vaccine extends PassiveItem {
     static meta = {
         name: '예방주사', kind: 'passive', rarity: 'LEGEND',
-        level: 1, multiplier: 20, LevelUpPlus: 5,
+        level: 1, multiplier: 10, LevelUpPlus: 5,
         desc: (mul) => `유닛들의 상태이상 지속 시간이 ${mul}% 감소합니다.`,
     };
     constructor() {
@@ -225,6 +225,29 @@ export class AugReroll extends ActiveItem {
     }
 }
 
+export class SmokeBomb extends ActiveItem {
+    static meta = {
+        name: '연막탄', kind: 'active', rarity: 'RARE',
+        desc: '무작위 타워 하나의 사거리가 3초 동안 20% 감소합니다.',
+    };
+    constructor() {
+        super('연막탄');
+    }
+    use() {
+        if (this.used) return false;
+        const candidates = game.towers.filter(t =>
+            t && !t.stopped && t.smokeTimer <= 0 &&
+            t.constructor.name !== 'AllRoundTower'
+        );
+        if (!candidates.length) return false;
+        const tower = candidates[Math.floor(Math.random() * candidates.length)];
+        tower.smokeBaseRange = tower.range;
+        tower.range = Math.floor(tower.range * 0.8);
+        tower.smokeTimer = 3;
+        this.used = true;
+        return true;
+    }
+}
 
 export class UnitTicketHero extends ActiveItem {
     static meta = {
@@ -329,7 +352,7 @@ export const ITEM_CLASSES = [
     TutorialBook, UnitGachaTicket, ItemGachaTicket,
     // COMMON 액티브
     // UNCOMMON 액티브
-    AugReroll,
+    AugReroll, SmokeBomb,
     UnitTicketHero, ItemTicketHero, HpPotion,
     TowerStop, UnitTicketLegend, ItemTicketLegend,
 ];
